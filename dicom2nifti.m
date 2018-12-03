@@ -1,6 +1,6 @@
-function [hdr, img] = dicom2nifti(dicoms)
-%DICOM2NIFTI Convert DICOM files to NIfTI header and image
-%% obtain dicom headers
+function nifti = dicom2nifti(dicoms)
+%DICOM2NIFTI Convert DICOM images to NIfTI
+%% parse DICOM headers
 if isstring(dicoms) && isscalar(dicoms) && isfolder(dicoms)
     dicoms = dir2ff(dicoms);
 elseif ischar(dicoms) && isrow(dicoms) && isfolder(dicoms)
@@ -13,18 +13,18 @@ else
     dicom1 = dicominfo(dicoms(1));
     dicom2 = dicominfo(dicoms(end));
 end
-csa = csa2(dicom1.Private_0029_1010);
+csa = csa2decode(dicom1.Private_0029_1010);
 if isempty(csa.NumberOfImagesInMosaic.Data)
     n_slices = 1;
 else
     n_slices = str2double(csa.NumberOfImagesInMosaic.Data{1});
 end
-%% TODO nifti datatype
+%% TODO extract NIfTI datatype
 switch dicom1.BitsAllocated
     otherwise
         DT = 'int16';
 end
-%% dicom affine
+%% parse DICOM affine
 Xxyz = dicom1.ImageOrientationPatient(1:3);
 Yxyz = dicom1.ImageOrientationPatient(4:6);
 Txyz = dicom1.ImagePositionPatient;
@@ -56,13 +56,49 @@ else
     S(3) = norm(Zxyz);
     Zxyz = Zxyz / S(3);
 end
-%% nifti affine
+%% build NIfTI affine
 R = [Xxyz, Yxyz, Zxyz];
 T = Txyz;
 R(1:2, :) = -R(1:2, :);
 T(1:2) = -T(1:2);
-%% nifti image
-img = zeros(L', DT);
+%% build NIfTI header
+nifti = struct();
+nifti.Description = ''; % multiple sources
+nifti.ImageSize = L';
+nifti.PixelDimensions = S';
+nifti.Datatype = DT;
+nifti.SpaceUnits = 'Millimeter';
+nifti.TimeUnits = 'Second';
+% nifti.AdditiveOffset = 0;
+% nifti.MultiplicativeScaling = 1;
+nifti.SliceCode = 'Sequential-Increasing'; % TODO SliceCode
+nifti.SliceStart = 0;
+nifti.SliceEnd = L(3) - 1;
+nifti.SliceDuration = 0; % ignore this field
+% nifti.TimeOffset = 0;
+% nifti.DisplayIntensityRange = [0 0]; % ignore this field
+nifti.TransformName = 'Sform';
+nifti.Transform = affine3d([
+    (R * diag(S(1:3)))', zeros(3, 1);
+    T', 1;
+]);
+nifti.Qfactor = sign(det(R));
+switch dicom1.InPlanePhaseEncodingDirection
+    case 'COL'
+        nifti.FrequencyDimension = 1;
+        nifti.PhaseDimension = 2;
+        nifti.SpatialDimension = 3;
+    case 'ROW'
+        nifti.FrequencyDimension = 2;
+        nifti.PhaseDimension = 1;
+        nifti.SpatialDimension = 3;
+    otherwise
+        nifti.FrequencyDimension = 0;
+        nifti.PhaseDimension = 0;
+        nifti.SpatialDimension = 3;
+end
+%% build NIfTI image
+nifti.img = zeros(L', DT);
 if n_slices > 1
     for t = 1:L(4)
         dicomimg = dicomread(dicoms(t));
@@ -73,7 +109,7 @@ if n_slices > 1
         ibeg = 1;
         iend = istp;
         for k = 1:L(3)
-            img(:, :, k, t) = dicomimg(jbeg:jend, ibeg:iend)';
+            nifti.img(:, :, k, t) = dicomimg(jbeg:jend, ibeg:iend)';
             ibeg = ibeg + istp;
             iend = iend + istp;
             if iend > dicom1.Columns
@@ -87,43 +123,13 @@ if n_slices > 1
 else
     for k = 1:L(3)
         dicomimg = dicomread(dicoms(k));
-        img(:, :, k) = dicomimg';
+        nifti.img(:, :, k) = dicomimg';
     end
 end
-%% nifti header
-hdr = struct();
-hdr.Description = ''; % multiple sources
-hdr.ImageSize = L';
-hdr.PixelDimensions = S';
-hdr.Datatype = DT;
-hdr.SpaceUnits = 'Millimeter';
-hdr.TimeUnits = 'Second';
-% nifti.AdditiveOffset = 0;
-% nifti.MultiplicativeScaling = 1;
-hdr.SliceCode = 'Sequential-Increasing';
-hdr.SliceStart = 0;
-hdr.SliceEnd = L(3) - 1;
-hdr.SliceDuration = 0; % ignore this field
-% nifti.TimeOffset = 0;
-% nifti.DisplayIntensityRange = [0 0]; % ignore this field
-hdr.TransformName = 'Sform';
-hdr.Transform = affine3d([
-    (R * diag(S(1:3)))', zeros(3, 1);
-    T', 1;
-]);
-hdr.Qfactor = sign(det(R)); % ignore this field
-switch dicom1.InPlanePhaseEncodingDirection
-    case 'COL'
-        hdr.FrequencyDimension = 1;
-        hdr.PhaseDimension = 2;
-        hdr.SpatialDimension = 3;
-    case 'ROW'
-        hdr.FrequencyDimension = 2;
-        hdr.PhaseDimension = 1;
-        hdr.SpatialDimension = 3;
-    otherwise
-        hdr.FrequencyDimension = 0;
-        hdr.PhaseDimension = 0;
-        hdr.SpatialDimension = 3;
+%% apply default NIfTI transformation
+F = [false, true, false];
+if det(R) < 0
+    F(3) = true;
 end
+nifti = niftiflip(nifti, F);
 end
