@@ -14,6 +14,11 @@ reconstruct DICOM files given one NIfTI and two DICOM files
    ```
    pip install nibabel
    ```
+4. [Pydicom](https://pydicom.github.io/)
+   > Pydicom is a pure Python package for working with DICOM files such as medical images, reports, and radiotherapy objects.
+   ```
+   pip install pydicom
+   ```
 
 ## Parse a directory
 ```matlab
