@@ -5,6 +5,8 @@ import os
 import re
 import pydicom
 
+import csa2
+
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="source NIfTI file")
 args = parser.parse_args()
