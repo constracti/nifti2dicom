@@ -10,10 +10,10 @@ def decode(arr):
 	i = 16
 	hdr = {}
 	for ctags in range(0, ntags):
-		key = arr[i:i+64].split(bytes(1),1)[0].decode()
+		key = arr[i:i+64].split(bytes(1), 1)[0].decode()
 		hdr[key] = {}
 		hdr[key]["VM"] = int.from_bytes(arr[i+64:i+68], "little")
-		hdr[key]["VR"] = arr[i+68:i+72].split(bytes(1),1)[0].decode()
+		hdr[key]["VR"] = arr[i+68:i+72].split(bytes(1), 1)[0].decode()
 		hdr[key]["SyngoDT"] = int.from_bytes(arr[i+72:i+76], "little")
 		nitems = int.from_bytes(arr[i+76:i+80], "little")
 		# int.from_bytes(arr[80:84], "little") # unused 77 or 205
@@ -24,7 +24,10 @@ def decode(arr):
 			int.from_bytes(arr[i+4:i+8], "little") # unused
 			int.from_bytes(arr[i+8:i+12], "little") # unused
 			int.from_bytes(arr[i+12:i+16], "little") # unused
-			hdr[key]["Data"].append(arr[i+16:i+16+item_len].decode())
+			if item_len:
+				hdr[key]["Data"].append(arr[i+16:i+16+item_len].split(bytes(1), 1)[0].decode())
+			else:
+				hdr[key]["Data"].append(None)
 			i += 16 + math.ceil(item_len / 4) * 4
 	return hdr
 
@@ -47,6 +50,7 @@ def encode(hdr):
 			arr += bytes(4) # unused
 			arr += bytes(4) # unused
 			arr += bytes(4) # unused
-			arr += dat.encode().ljust(math.ceil(item_len / 4) * 4, bytes(1))
+			if item_len:
+				arr += dat.encode().ljust(math.ceil(item_len / 4) * 4, bytes(1))
 	arr += bytes(4) # append one more zero
 	return arr
