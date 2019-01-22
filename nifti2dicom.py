@@ -34,7 +34,8 @@ else:
 # parse NIfTI header
 nii = nibabel.load(src)
 L0 = nii.get_shape()
-A0 = nii.get_affine()
+R0 = nii.get_affine()
+R0[0:3,3] = 0
 
 # find DICOM files
 dcm1 = None
@@ -62,7 +63,7 @@ Yxyz = numpy.array(list(map(float, dcm1dataset.ImageOrientationPatient[3:6])))
 Sxyz = numpy.flip(numpy.array(list(map(float, dcm1dataset.PixelSpacing))))
 if nslices > 1:
 	Zxyz = numpy.array(list(map(float, csa_image_header_info["SliceNormalVector"]["Data"][0:3])))
-	Sxyz = numpy.append(float(dcm1dataset.SliceThickness))
+	Sxyz = numpy.append(Sxyz, float(dcm1dataset.SliceThickness))
 else:
 	Zxyz = (numpy.array(list(map(float, dcm2dataset.ImagePositionPatient))) \
 		- numpy.array(list(map(float, dcm1dataset.ImagePositionPatient)))) \
@@ -73,10 +74,10 @@ else:
 # calculate NIfTI target affine
 Rxyz = numpy.column_stack((Xxyz, Yxyz, Zxyz)) * Sxyz
 Rxyz[0:2,:] *= -1
-Axyz = numpy.concatenate((Rxyz, numpy.zeros(3)[numpy.newaxis].T), axis=1)
-Axyz = numpy.concatenate((Axyz, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
+Rxyz = numpy.concatenate((Rxyz, numpy.zeros(3)[numpy.newaxis].T), axis=1)
+Rxyz = numpy.concatenate((Rxyz, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
 
 # prepare NIfTI image
-C = numpy.linalg.solve(Axyz, A0)
+C = numpy.linalg.solve(Rxyz, R0)
 ornt = nibabel.io_orientation(C)
 nii = nii.as_reoriented(ornt)
