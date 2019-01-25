@@ -1,4 +1,4 @@
-# http://nipy.org/nibabel/dicom/siemens_arr.html
+# http://nipy.org/nibabel/dicom/siemens_csa.html
 
 import math
 
