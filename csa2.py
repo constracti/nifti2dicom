@@ -54,3 +54,32 @@ def encode(hdr):
 				arr += dat.encode().ljust(math.ceil(item_len / 4) * 4, bytes(1))
 	arr += bytes(4) # append one more zero
 	return arr
+
+def diff(hdr1, hdr2):
+	keys1 = iter(sorted(hdr1.keys()))
+	keys2 = iter(sorted(hdr2.keys()))
+	key1 = next(keys1, None)
+	key2 = next(keys2, None)
+	while key1 and key2:
+		val1 = hdr1[key1]
+		val2 = hdr2[key2]
+		if key1 < key2:
+			print("< {}: {}".format(key1, val1))
+			key1 = next(keys1, None)
+		elif key2 < key1:
+			print("> {}: {}".format(key2, val2))
+			key2 = next(keys2, None)
+		else:
+			if val1 != val2:
+				print("< {}: {}".format(key1, val1))
+				print("> {}: {}".format(key2, val2))
+			key1 = next(keys1, None)
+			key2 = next(keys2, None)
+	while key1:
+		val1 = hdr1[key1]
+		print("< {}: {}".format(key1, val1))
+		key1 = next(keys1, None)
+	while key2:
+		val2 = hdr2[key2]
+		print("> {}: {}".format(key2, val2))
+		key2 = next(keys2, None)
