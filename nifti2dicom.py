@@ -88,7 +88,6 @@ data = numpy.asarray(nii.dataobj).swapaxes(0, 1)
 
 # prepare common DICOM dataset
 ds0 = copy.deepcopy(ds1)
-del ds0.SmallestImagePixelValue, ds0.LargestImagePixelValue
 del ds0.WindowCenter, ds0.WindowWidth, ds0.WindowCenterWidthExplanation
 ds0.ProtocolName = re.sub("\.nii(?:\.gz)$", "", os.path.split(src)[-1], flags=re.I) # customization
 ds0.SeriesInstanceUID = pydicom.uid.generate_uid() # customization
@@ -104,14 +103,22 @@ else:
 	for k in range(L[2]):
 		dst = os.path.join(dst_dir, str(k).zfill(math.floor(math.log10(L[2])) + 1) + ".dcm")
 		ds0.InstanceNumber = k + 1
-		dicomtools.linear_datetime(["InstanceCreation", "Content"], ds0, ds1, ds2)
-		dicomtools.linear_float_array([(0x0019, 0x1015), "ImagePositionPatient"], ds0, ds1, ds2)
-		dicomtools.linear_float("SliceLocation", ds0, ds1, ds2)
+		dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], ds0, ds1, ds2)
+		dicomtools.linear_float_array((0x0019, 0x1015), ds0, ds1, ds2)   # [SlicePosition_PCS]
+		if (0x0019, 0x1016) in ds0:
+			dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2) # [TimeAfterStart]
+		dicomtools.linear_float_array((0x0020, 0x0032), ds0, ds1, ds2)   # Image Position (Patient)
+		dicomtools.linear_float((0x0020, 0x1041), ds0, ds1, ds2)         # Slice Location
+		data_slice = data[:,:,k]
+		ds0.SmallestImagePixelValue = data_slice.min()                   # (0028, 0106)
+		ds0.LargestImagePixelValue = data_slice.max()                    # (0028, 0107)
+		# NOTE (0x0029, 0x1010) CSA Image Header Info
+		# NOTE (0x0051, 0x100d), e.g. SP A116.1 and SP P72.4
 		# add pixel data
-		# pydicom.datadict.tag_for_keyword("PixelData") == 0x7fe00010
 		# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
 		# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
 		# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
-		ds0.add_new((0x7fe0, 0x0010), "OW",  data[:,:,k].tobytes())
+		ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())       # Pixel Data
+		# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
 		pydicom.dcmwrite(dst, ds0)
 		print("file {} out of {} written".format(k + 1, L[2]))
