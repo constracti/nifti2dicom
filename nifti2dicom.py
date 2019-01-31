@@ -55,16 +55,16 @@ if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
 	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0]);
 else:
 	nslices = 1;
-Xxyz = numpy.array(list(map(float, ds1.ImageOrientationPatient[0:3])))
-Yxyz = numpy.array(list(map(float, ds1.ImageOrientationPatient[3:6])))
-Sxyz = numpy.flip(numpy.array(list(map(float, ds1.PixelSpacing))))
+Xxyz = numpy.array(ds1.ImageOrientationPatient[0:3])
+Yxyz = numpy.array(ds1.ImageOrientationPatient[3:6])
+Sxyz = numpy.flip(numpy.array(ds1.PixelSpacing))
 if nslices > 1:
-	Zxyz = numpy.array(list(map(float, csa_image_header_info["SliceNormalVector"]["Data"][0:3])))
-	Sxyz = numpy.append(Sxyz, float(ds1.SliceThickness))
+	Zxyz = numpy.array(csa_image_header_info["SliceNormalVector"]["Data"][0:3]).astype(float)
+	Sxyz = numpy.append(Sxyz, ds1.SliceThickness)
 else:
-	Zxyz = (numpy.array(list(map(float, ds2.ImagePositionPatient))) \
-		- numpy.array(list(map(float, ds1.ImagePositionPatient)))) \
-		/ (float(ds2.InstanceNumber) - float(ds1.InstanceNumber))
+	Zxyz = (numpy.array(ds2.ImagePositionPatient) \
+		- numpy.array(ds1.ImagePositionPatient)) \
+		/ (ds2.InstanceNumber - ds1.InstanceNumber)
 	Sxyz = numpy.append(Sxyz, numpy.linalg.norm(Zxyz))
 	Zxyz /= Sxyz[2]
 
