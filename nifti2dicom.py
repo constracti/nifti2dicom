@@ -101,53 +101,41 @@ dst_dir = os.path.join(src_dir, ds0.ProtocolName + datetime.datetime.now().strft
 assert not os.path.exists(dst_dir)
 os.mkdir(dst_dir)
 print("writing {} files in {}".format(L[-1], dst_dir))
-if nslices > 1:
-	for t in range(L[3]):
-		dst = os.path.join(dst_dir, str(t).zfill(math.floor(math.log10(L[3])) + 1) + ".dcm")
-		# NOTE (0x0008, 0x0018) SOP Instance UID
-		ds0.AcquisitionNumber = t + 1
-		ds0.InstanceNumber = t + 1
-		dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], ds0, ds1, ds2)
-		# NOTE (0x0008, 0x2112) Source Image Sequence
+for f in range(L[-1]):
+	dst = os.path.join(dst_dir, str(f).zfill(math.floor(math.log10(L[-1])) + 1) + ".dcm")
+	ds0.InstanceNumber = f + 1                                               # (0x0020, 0x0013)
+	dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], ds0, ds1, ds2)
+	# NOTE (0x0008, 0x0018) SOP Instance UID
+	# NOTE (0x0029, 0x1010) CSA Image Header Info
+	if nslices > 1:
+		ds0.AcquisitionNumber = f + 1
 		dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2)         # [TimeAfterStart]
-		# NOTE (0x0029, 0x1010) CSA Image Header Info
 		data_slice = numpy.zeros((ds0.Rows, ds0.Columns), data.dtype)
 		jinc = L[1]
 		jbeg, jend = 0, jinc
 		iinc = L[0]
 		ibeg, iend = 0, iinc
 		for k in range(L[2]):
-			data_slice[jbeg:jend, ibeg:iend] = data[:, :, k, t]
+			data_slice[jbeg:jend, ibeg:iend] = data[:, :, k, f]
 			ibeg, iend = ibeg + iinc, iend + iinc
 			if iend > ds0.Columns:
 				ibeg, iend = 0, iinc
 				jbeg, jend = jbeg + jinc, jend + jinc
-		ds0.SmallestImagePixelValue = data_slice.min()                   # (0x0028, 0x0106)
-		ds0.LargestImagePixelValue = data_slice.max()                    # (0x0028, 0x0107)
-		ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())       # Pixel Data
-		# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
-		pydicom.dcmwrite(dst, ds0)
-		print("file {} out of {} written".format(t + 1, L[3]))
-else:
-	for k in range(L[2]):
-		dst = os.path.join(dst_dir, str(k).zfill(math.floor(math.log10(L[2])) + 1) + ".dcm")
-		# NOTE (0x0008, 0x0018) SOP Instance UID
-		ds0.InstanceNumber = k + 1
-		dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], ds0, ds1, ds2)
+		# NOTE (0x0008, 0x2112) Source Image Sequence
+	else:
 		dicomtools.linear_float_array((0x0019, 0x1015), ds0, ds1, ds2)   # [SlicePosition_PCS]
 		if (0x0019, 0x1016) in ds0:
 			dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2) # [TimeAfterStart]
 		dicomtools.linear_float_array((0x0020, 0x0032), ds0, ds1, ds2)   # Image Position (Patient)
 		dicomtools.linear_float((0x0020, 0x1041), ds0, ds1, ds2)         # Slice Location
-		data_slice = data[:, :, k]
-		ds0.SmallestImagePixelValue = data_slice.min()                   # (0x0028, 0x0106)
-		ds0.LargestImagePixelValue = data_slice.max()                    # (0x0028, 0x0107)
-		# NOTE (0x0029, 0x1010) CSA Image Header Info
+		data_slice = data[:, :, f]
 		# NOTE (0x0051, 0x100d), e.g. SP A116.1 and SP P72.4
-		# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
-		# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
-		# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
-		ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())       # Pixel Data
-		# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
-		pydicom.dcmwrite(dst, ds0)
-		print("file {} out of {} written".format(k + 1, L[2]))
+	ds0.SmallestImagePixelValue = data_slice.min()                           # (0x0028, 0x0106)
+	ds0.LargestImagePixelValue = data_slice.max()                            # (0x0028, 0x0107)
+	# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
+	# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
+	# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
+	ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())               # Pixel Data
+	# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
+	pydicom.dcmwrite(dst, ds0)
+	print("file {} out of {} written".format(f + 1, L[-1]))
