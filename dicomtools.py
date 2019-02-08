@@ -8,7 +8,7 @@ def _prop(dataset, tag):
 		return dataset[tag]
 
 def linear_float(tags, ds0, ds1, ds2):
-	if not type(tags) is list:
+	if type(tags) is not list:
 		tags = [tags]
 	for t in tags:
 		v1 = _prop(ds1, t).value
@@ -17,7 +17,7 @@ def linear_float(tags, ds0, ds1, ds2):
 		_prop(ds0, t).value = v0
 
 def linear_float_array(tags, ds0, ds1, ds2):
-	if not type(tags) is list:
+	if type(tags) is not list:
 		tags = [tags]
 	for t in tags:
 		v1 = _prop(ds1, t).value
@@ -29,7 +29,7 @@ def linear_float_array(tags, ds0, ds1, ds2):
 		_prop(ds0, t).value = v0
 
 def linear_datetime(tags, ds0, ds1, ds2):
-	if not type(tags) is list:
+	if type(tags) is not list:
 		tags = [tags]
 	for t in tags:
 		v1 = ds1.data_element(t + "Date").value + ds1.data_element(t + "Time").value

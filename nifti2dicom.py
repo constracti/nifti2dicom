@@ -11,13 +11,14 @@ import pydicom
 import csa2
 import dicomtools
 
+# parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("src", help="source NIfTI file")
 args = parser.parse_args()
 
 # find NIfTI file
 if os.path.isfile(args.src):
-	assert re.search("\.nii(?:\.gz)$", args.src, flags=re.I), "file {} is not a NIfTI file".format(args.src)
+	assert re.search("\.nii(?:\.gz)$", args.src, flags=re.I), "{} is not a NIfTI file".format(args.src)
 	src = args.src
 elif os.path.isdir(args.src):
 	# select the first NIfTI file in the directory
@@ -26,9 +27,9 @@ elif os.path.isdir(args.src):
 		if re.search("\.nii(?:\.gz)$", file, flags=re.I):
 			src = os.path.join(args.src, file)
 			break
-	assert src, "no NIfTI file found in directory {}".format(args.src)
+	assert src, "{} does not contain any NIfTI file".format(args.src)
 else:
-	assert False, "provide a NIfTI file"
+	assert False, "{} is not a file nor a directory"
 
 # find DICOM files
 # select first and last DICOM files in the directory of the NIfTI file
@@ -43,8 +44,6 @@ for file in os.listdir(src_dir):
 			dcm2 = os.path.join(src_dir, file)
 
 # read DICOM datasets
-# stop before (7fe0, 0010) Pixel Data
-# and         (fffc, fffc) Data Set Trailing Padding
 ds1 = pydicom.dcmread(dcm1, stop_before_pixels=True)
 ds2 = pydicom.dcmread(dcm2, stop_before_pixels=True)
 
@@ -60,7 +59,7 @@ Yxyz = numpy.array(ds1.ImageOrientationPatient[3:6])
 Sxyz = numpy.flip(numpy.array(ds1.PixelSpacing))
 if nslices > 1:
 	Zxyz = numpy.array(csa_image_header_info["SliceNormalVector"]["Data"][0:3]).astype(float)
-	Sxyz = numpy.append(Sxyz, ds1.SliceThickness)
+	Sxyz = numpy.append(Sxyz, ds1.SpacingBetweenSlices if "SpacingBetweenSlices" in ds1 else ds1.SliceThickness)
 else:
 	Zxyz = (numpy.array(ds2.ImagePositionPatient) \
 		- numpy.array(ds1.ImagePositionPatient)) \
