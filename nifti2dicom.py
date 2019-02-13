@@ -1,9 +1,12 @@
+# TODO slice_code
+
 import argparse
 import os
 import copy
 import re
 import datetime
 import math
+
 import numpy
 import nibabel
 import pydicom
@@ -76,6 +79,7 @@ Rxyz = numpy.concatenate((Rxyz, numpy.zeros(3)[numpy.newaxis].T), axis=1)
 Rxyz = numpy.concatenate((Rxyz, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
 
 # reorient NIfTI image
+print("reading NIfTI file {}".format(src))
 nii = nibabel.load(src)
 C = numpy.linalg.solve(Rxyz, nii.get_affine())
 ornt = nibabel.io_orientation(C)
@@ -99,7 +103,6 @@ ds0.SeriesInstanceUID = pydicom.uid.generate_uid()
 dst_dir = os.path.join(src_dir, ds0.ProtocolName + datetime.datetime.now().strftime("-%Y%m%d%H%M%S"))
 assert not os.path.exists(dst_dir)
 os.mkdir(dst_dir)
-print("writing {} files in {}".format(L[-1], dst_dir))
 for f in range(L[-1]):
 	dst = os.path.join(dst_dir, str(f).zfill(math.floor(math.log10(L[-1])) + 1) + ".dcm")
 	ds0.InstanceNumber = f + 1                                               # (0x0020, 0x0013)
@@ -136,5 +139,7 @@ for f in range(L[-1]):
 	# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
 	ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())               # Pixel Data
 	# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
+	print("writing [{}/{}] DICOM file {}".format(str(f + 1).rjust(math.floor(math.log10(L[-1]) + 1)), dst))
 	pydicom.dcmwrite(dst, ds0)
-	print("file {} out of {} written".format(f + 1, L[-1]))
+
+print("complete")
