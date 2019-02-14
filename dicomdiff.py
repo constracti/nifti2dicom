@@ -5,8 +5,8 @@ import re
 import pydicom
 
 def _path2dataset(path):
-	assert os.path.isfile(path), "not a valid file {}".format(path)
-	assert re.search("\.(?:dcm|ima)$", path, flags=re.I), "not a DICOM file {}".format(path)
+	assert os.path.isfile(path)
+	assert re.search("\.(?:dcm|ima)$", path, flags=re.I)
 	return pydicom.dcmread(path)
 
 def diff(dcm1, dcm2):

@@ -4,7 +4,6 @@ import re
 
 import pydicom
 
-
 def _path2set(path):
 	set = []
 	if os.path.isdir(path):
@@ -19,7 +18,6 @@ def _path2set(path):
 		assert False, "not a valid directory or file {}".format(path)
 	return set
 
-
 def cmp(set1, set2, verbose=False):
 	if type(set1) is str:
 		set1 = _path2set(set1)
@@ -29,7 +27,6 @@ def cmp(set1, set2, verbose=False):
 	assert len(set1) == len(set2), "sets have different number of elements"
 	if verbose:
 		print("comparing {} pairs of DICOM pixel data".format(len(set1)))
-
 	for i, (f1, f2) in enumerate(zip(set1, set2)):
 		if verbose:
 			print("pair #{}: ".format(i), end="")
@@ -51,7 +48,6 @@ def cmp(set1, set2, verbose=False):
 	if __name__ == "__main__":
 		exit(0)
 	return True
-
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

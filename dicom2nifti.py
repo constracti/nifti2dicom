@@ -67,7 +67,10 @@ affine = numpy.concatenate((R * S[0:3], T[numpy.newaxis].T), axis=1)
 affine = numpy.concatenate((affine, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
 
 # build NIfTI image
-tags = ["BitsAllocated", "Rows", "Columns", "PixelRepresentation", "SamplesPerPixel", "PixelData"]
+tags = [
+	"InstanceNumber",
+	"BitsAllocated", "Rows", "Columns", "PixelRepresentation", "SamplesPerPixel", "PixelData"
+]
 slice_times = [];
 data = numpy.zeros(L, DT)
 for f in range(L[-1]):
@@ -80,13 +83,13 @@ for f in range(L[-1]):
 		iinc = L[0]
 		ibeg, iend = 0, iinc
 		for k in range(L[2]):
-			data[:, :, k, f] = data_slice[jbeg:jend, ibeg:iend].T
+			data[:, :, k, dicom.InstanceNumber - 1] = data_slice[jbeg:jend, ibeg:iend].T
 			ibeg, iend = ibeg + iinc, iend + iinc
 			if iend > dicom1.Columns:
 				ibeg, iend = 0, iinc
 				jbeg, jend = jbeg + jinc, jend + jinc
 	else:
-		data[:, :, f] = data_slice.T
+		data[:, :, dicom.InstanceNumber - 1] = data_slice.T
 
 nifti = nibabel.Nifti1Image(data, affine)
 
