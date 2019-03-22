@@ -103,7 +103,7 @@ elif dicom1.InPlanePhaseEncodingDirection == "ROW":
 	nifti.header.set_dim_info(freq=1, phase=0, slice=2)
 else:
 	nifti.header.set_dim_info(slice=2)
-# NOTE pixdim[4], pixdim[7]
+# NOTE pixdim[4:8]
 nifti.header.set_zooms(S)
 # TODO slice_start, slice_end, slice_code, slice_duration
 nifti.header.set_xyzt_units("mm", "sec")
@@ -119,7 +119,7 @@ if numpy.linalg.det(R) < 0:
 nifti = nifti.as_reoriented(ornt)
 
 # save NIfTI object
-dst_path = os.path.join(args.dir, datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".nii.gz")
+dst_path = os.path.join(args.dir, dicom1.ProtocolName + datetime.datetime.now().strftime("-%Y%m%d%H%M%S") + ".nii.gz") # TODO filename
 assert not os.path.exists(dst_path)
 print("writing NIfTI file {}".format(dst_path))
 nibabel.save(nifti, dst_path)
