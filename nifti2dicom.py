@@ -36,6 +36,7 @@ else:
 # find DICOM files
 # select first and last DICOM files in the directory of the NIfTI file
 dicoms = dicomtools.listdir(src_dir)
+assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(src_dir)
 dcm1 = dicoms[0]
 dcm2 = dicoms[-1]
 del dicoms
