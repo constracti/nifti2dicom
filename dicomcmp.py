@@ -6,16 +6,15 @@ import re
 
 import pydicom
 
+import dicomtools
+
 def _path2set(path):
-	set = []
 	if os.path.isdir(path):
-		for f in os.listdir(path):
-			if re.search("\.(?:dcm|ima)$", f, flags=re.I):
-				set.append(os.path.join(path, f))
+		set = dicomtools.listdir(path)
 		assert set, "directory {} does not contain any DICOM file".format(path)
 	elif os.path.isfile(path):
 		assert re.search("\.(?:dcm|ima)$", path, flags=re.I), "not a DICOM file {}".format(path)
-		set.append(path)
+		set = [path]
 	else:
 		assert False, "not a valid directory or file {}".format(path)
 	return set

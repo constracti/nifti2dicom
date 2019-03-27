@@ -1,5 +1,16 @@
-import numpy
+import os
+import re
 import datetime
+
+import numpy
+import pydicom
+
+def listdir(path="."):
+	fs = os.listdir(path)
+	fs = [os.path.join(path, f) for f in filter(lambda f: re.search("\.(?:dcm|ima)$", f, flags=re.I), fs)]
+	fs = [(f, pydicom.dcmread(f, specific_tags=["InstanceNumber"]).InstanceNumber) for f in fs]
+	fs.sort(key=lambda f: f[1])
+	return [f[0] for f in fs]
 
 def _prop(dataset, tag):
 	if type(tag) is str:

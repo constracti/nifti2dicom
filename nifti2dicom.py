@@ -27,6 +27,7 @@ if os.path.isfile(args.src):
 	src = args.src
 elif os.path.isdir(args.src):
 	# select the first NIfTI file in the directory
+	# TODO iterate through all NIfTI files
 	src = None
 	for file in os.listdir(args.src):
 		if re.search("\.nii(?:\.gz)$", file, flags=re.I):
@@ -38,15 +39,11 @@ else:
 
 # find DICOM files
 # select first and last DICOM files in the directory of the NIfTI file
-dcm1 = None
-dcm2 = None
 src_dir = os.path.dirname(src)
-for file in os.listdir(src_dir):
-	if re.search("\.(?:dcm|ima)$", file, flags=re.I):
-		if dcm1 is None:
-			dcm1 = os.path.join(src_dir, file)
-		else:
-			dcm2 = os.path.join(src_dir, file)
+dicoms = dicomtools.listdir(src_dir)
+dcm1 = dicoms[0]
+dcm2 = dicoms[-1]
+del dicoms
 
 # read DICOM datasets
 ds1 = pydicom.dcmread(dcm1, stop_before_pixels=True)

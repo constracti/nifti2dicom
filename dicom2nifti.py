@@ -10,6 +10,7 @@ import numpy
 import pydicom
 import nibabel
 
+import dicomtools
 import csa2
 
 # parse arguments
@@ -19,10 +20,7 @@ args = parser.parse_args()
 
 # find DICOM files
 assert os.path.isdir(args.dir), "{} is not a directory".format(args.dir)
-dicoms = []
-for file in os.listdir(args.dir):
-	if re.search("\.(?:dcm|ima)$", file, flags=re.I):
-		dicoms.append(os.path.join(args.dir, file))
+dicoms = dicomtools.listdir(args.dir)
 assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(args.dir)
 
 # read first and last DICOM files
