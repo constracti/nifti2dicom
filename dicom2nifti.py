@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import argparse
 import os
 import re
@@ -33,9 +35,9 @@ DT = numpy.int16
 # build DICOM affine
 csa_image_header_info = csa2.decode(dicom1[0x0029, 0x1010].value)
 if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
-	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0]);
+	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
 else:
-	nslices = 1;
+	nslices = 1
 X = numpy.array(dicom1.ImageOrientationPatient[0:3])
 Y = numpy.array(dicom1.ImageOrientationPatient[3:6])
 T = numpy.array(dicom1.ImagePositionPatient)
@@ -54,7 +56,7 @@ else:
 	L = numpy.array([dicom1.Columns, dicom1.Rows, len(dicoms)])
 	S = numpy.flip(numpy.array(dicom1.PixelSpacing))
 	Z = (numpy.array(dicom2.ImagePositionPatient) - numpy.array(dicom1.ImagePositionPatient)) \
-		/ (dicom2.InstanceNumber - dicom1.InstanceNumber);
+		/ (dicom2.InstanceNumber - dicom1.InstanceNumber)
 	S = numpy.append(S, numpy.linalg.norm(Z))
 	Z /= S[2]
 
@@ -71,7 +73,7 @@ tags = [
 	"InstanceNumber",
 	"BitsAllocated", "Rows", "Columns", "PixelRepresentation", "SamplesPerPixel", "PixelData"
 ]
-slice_times = [];
+slice_times = []
 data = numpy.zeros(L, DT)
 for f in range(L[-1]):
 	print("reading [{}/{}] DICOM file {}".format(str(f + 1).rjust(math.floor(math.log10(L[-1]) + 1)), L[-1], dicoms[f]))

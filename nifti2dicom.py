@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # TODO slice_code
 
 import argparse
@@ -54,9 +56,9 @@ ds2 = pydicom.dcmread(dcm2, stop_before_pixels=True)
 # http://nipy.org/nibabel/dicom/dicom_orientation.html
 csa_image_header_info = csa2.decode(ds1[0x0029, 0x1010].value)
 if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
-	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0]);
+	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
 else:
-	nslices = 1;
+	nslices = 1
 Xxyz = numpy.array(ds1.ImageOrientationPatient[0:3])
 Yxyz = numpy.array(ds1.ImageOrientationPatient[3:6])
 Sxyz = numpy.flip(numpy.array(ds1.PixelSpacing))
@@ -139,7 +141,7 @@ for f in range(L[-1]):
 	# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
 	ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())               # Pixel Data
 	# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
-	print("writing [{}/{}] DICOM file {}".format(str(f + 1).rjust(math.floor(math.log10(L[-1]) + 1)), dst))
+	print("writing [{}/{}] DICOM file {}".format(str(f + 1).rjust(math.floor(math.log10(L[-1]) + 1)), L[-1], dst))
 	pydicom.dcmwrite(dst, ds0)
 
 print("complete")
