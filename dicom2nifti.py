@@ -20,7 +20,7 @@ args = parser.parse_args()
 
 # find DICOM files
 assert os.path.isdir(args.dir), "{} is not a directory".format(args.dir)
-dicoms = dicomtools.listdir(args.dir)
+dicoms = dicomtools.dir_list_files(args.dir)
 assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(args.dir)
 
 # read first and last DICOM files

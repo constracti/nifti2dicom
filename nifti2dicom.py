@@ -28,14 +28,14 @@ if os.path.isfile(args.src):
 	src_dir = os.path.dirname(args.src)
 elif os.path.isdir(args.src):
 	src_dir = args.src
-	src_list = [os.path.join(args.src, f) for f in filter(lambda f: re.search("\.nii(?:\.gz)$", f, flags=re.I), os.listdir(args.src))]
+	src_list = [os.path.join(args.src, f) for f in os.listdir(args.src) if re.search("\.nii(?:\.gz)$", f, flags=re.I)]
 	assert src_list, "{} does not contain any NIfTI file".format(args.src)
 else:
 	assert False, "{} is not a file nor a directory".format(args.src)
 
 # find DICOM files
 # select first and last DICOM files in the directory of the NIfTI file
-dicoms = dicomtools.listdir(src_dir)
+dicoms = dicomtools.dir_get_files(src_dir)
 assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(src_dir)
 dcm1 = dicoms[0]
 dcm2 = dicoms[-1]

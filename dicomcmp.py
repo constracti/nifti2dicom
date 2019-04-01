@@ -10,7 +10,7 @@ import dicomtools
 
 def _path2set(path):
 	if os.path.isdir(path):
-		set = dicomtools.listdir(path)
+		set = dicomtools.dir_get_files(path)
 		assert set, "directory {} does not contain any DICOM file".format(path)
 	elif os.path.isfile(path):
 		assert re.search("\.(?:dcm|ima)$", path, flags=re.I), "not a DICOM file {}".format(path)
