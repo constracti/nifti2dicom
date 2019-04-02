@@ -28,14 +28,14 @@ if os.path.isfile(args.src):
 	src_dir = os.path.dirname(args.src)
 elif os.path.isdir(args.src):
 	src_dir = args.src
-	src_list = [os.path.join(args.src, f) for f in filter(lambda f: re.search("\.nii(?:\.gz)$", f, flags=re.I), os.listdir(args.src))]
+	src_list = [os.path.join(args.src, f) for f in os.listdir(args.src) if re.search("\.nii(?:\.gz)$", f, flags=re.I)]
 	assert src_list, "{} does not contain any NIfTI file".format(args.src)
 else:
 	assert False, "{} is not a file nor a directory".format(args.src)
 
 # find DICOM files
 # select first and last DICOM files in the directory of the NIfTI file
-dicoms = dicomtools.listdir(src_dir)
+dicoms = dicomtools.dir_list_files(src_dir)
 assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(src_dir)
 dcm1 = dicoms[0]
 dcm2 = dicoms[-1]
@@ -47,9 +47,13 @@ ds2 = pydicom.dcmread(dcm2, stop_before_pixels=True)
 
 # build DICOM affine
 # http://nipy.org/nibabel/dicom/dicom_orientation.html
-csa_image_header_info = csa2.decode(ds1[0x0029, 0x1010].value)
-if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
-	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
+private_creator = ds1[0x0029, 0x0010].value
+if private_creator == "SIEMENS CSA HEADER":
+	csa_image_header_info = csa2.decode(ds1[0x0029, 0x1010].value)
+	if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
+		nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
+	else:
+		nslices = 1
 else:
 	nslices = 1
 Xxyz = numpy.array(ds1.ImageOrientationPatient[0:3])
@@ -73,6 +77,13 @@ Rxyz[0:2,:] *= -1
 Rxyz = numpy.concatenate((Rxyz, numpy.zeros(3)[numpy.newaxis].T), axis=1)
 Rxyz = numpy.concatenate((Rxyz, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
 
+# prepare common DICOM dataset
+ds0 = copy.deepcopy(ds1)
+# Window Explanation Algorithm not specified
+ds0.pop((0x0028, 0x1050), None) # WindowCenter
+ds0.pop((0x0028, 0x1051), None) # WindowWidth
+ds0.pop((0x0028, 0x1055), None) # Window Center & Width Explanation
+
 for src in src_list:
 	# reorient NIfTI image
 	print("reading NIfTI file {}".format(src))
@@ -83,13 +94,7 @@ for src in src_list:
 	# prepare DICOM pixel data by transposing NIfTI data
 	data = numpy.asarray(nii.dataobj).swapaxes(0, 1)
 
-	# prepare common DICOM dataset
-	ds0 = copy.deepcopy(ds1)
-	# Window Explanation Algorithm not specified
-	del ds0[0x0028, 0x1050] # WindowCenter
-	del ds0[0x0028, 0x1051] # WindowWidth
-	del ds0[0x0028, 0x1055] # Window Center & Width Explanation
-	# customization
+	# customize common DICOM dataset
 	ds0.ProtocolName = re.sub("\.nii(?:\.gz)$", "", os.path.split(src)[-1], flags=re.I)
 	ds0.SeriesInstanceUID = pydicom.uid.generate_uid()
 
@@ -99,13 +104,15 @@ for src in src_list:
 	os.mkdir(dst_dir)
 	for f in range(L[-1]):
 		dst = os.path.join(dst_dir, str(f).zfill(math.floor(math.log10(L[-1])) + 1) + ".dcm")
-		ds0.InstanceNumber = f + 1                                               # (0x0020, 0x0013)
+		ds0.InstanceNumber = f + 1                                                     # (0x0020, 0x0013)
+		if (0x2001, 0x100a) in ds0:
+			ds0[0x2001, 0x100a].value = f + 1                                      # Slice Number MR
 		dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], ds0, ds1, ds2)
 		# NOTE (0x0008, 0x0018) SOP Instance UID
 		# NOTE (0x0029, 0x1010) CSA Image Header Info
 		if nslices > 1:
 			ds0.AcquisitionNumber = f + 1
-			dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2)         # [TimeAfterStart]
+			dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2)               # [TimeAfterStart]
 			data_slice = numpy.zeros((ds0.Rows, ds0.Columns), data.dtype)
 			jinc = L[1]
 			jbeg, jend = 0, jinc
@@ -119,19 +126,22 @@ for src in src_list:
 					jbeg, jend = jbeg + jinc, jend + jinc
 			# NOTE (0x0008, 0x2112) Source Image Sequence
 		else:
-			dicomtools.linear_float_array((0x0019, 0x1015), ds0, ds1, ds2)   # [SlicePosition_PCS]
 			if (0x0019, 0x1016) in ds0:
-				dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2) # [TimeAfterStart]
-			dicomtools.linear_float_array((0x0020, 0x0032), ds0, ds1, ds2)   # Image Position (Patient)
-			dicomtools.linear_float((0x0020, 0x1041), ds0, ds1, ds2)         # Slice Location
+				dicomtools.linear_float_array((0x0019, 0x1015), ds0, ds1, ds2) # [SlicePosition_PCS]
+			if (0x0019, 0x1016) in ds0:
+				dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2)       # [TimeAfterStart]
+			dicomtools.linear_float_array((0x0020, 0x0032), ds0, ds1, ds2)         # Image Position (Patient)
+			dicomtools.linear_float((0x0020, 0x1041), ds0, ds1, ds2)               # Slice Location
 			data_slice = data[:, :, f]
 			# NOTE (0x0051, 0x100d), e.g. SP A116.1 and SP P72.4
-		ds0.SmallestImagePixelValue = data_slice.min()                           # (0x0028, 0x0106)
-		ds0.LargestImagePixelValue = data_slice.max()                            # (0x0028, 0x0107)
+		if "SmallestImagePixelValue" in ds0:
+			ds0.SmallestImagePixelValue = data_slice.min()                         # (0x0028, 0x0106)
+		if "LargestImagePixelValue" in ds0:
+			ds0.LargestImagePixelValue = data_slice.max()                          # (0x0028, 0x0107)
 		# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
 		# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
 		# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
-		ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())               # Pixel Data
+		ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())                     # Pixel Data
 		# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
 		print("writing [{}/{}] DICOM file {}".format(str(f + 1).rjust(math.floor(math.log10(L[-1]) + 1)), L[-1], dst))
 		pydicom.dcmwrite(dst, ds0)

@@ -5,10 +5,25 @@ import datetime
 import numpy
 import pydicom
 
-def listdir(path="."):
-	fs = os.listdir(path)
-	fs = [os.path.join(path, f) for f in filter(lambda f: re.search("\.(?:dcm|ima)$", f, flags=re.I), fs)]
-	fs = [(f, pydicom.dcmread(f, specific_tags=["InstanceNumber"]).InstanceNumber) for f in fs]
+def file_is_valid(filename):
+	try:
+		pydicom.dcmread(filename, specific_tags=[])
+		return True
+	except:
+		return False
+
+def file_get_tag(filename, tag):
+	try:
+		dataset = pydicom.dcmread(filename, specific_tags=[tag])
+		return dataset.data_element(tag).value
+	except pydicom.errors.InvalidDicomError:
+		return None
+
+def dir_list_files(path="."):
+	fs = [os.path.join(path, f) for f in os.listdir(path)]
+	fs = [f for f in fs if os.path.isfile(f)]
+	fs = [(f, file_get_tag(f, "InstanceNumber")) for f in fs]
+	fs = [f for f in fs if f[1] is not None]
 	fs.sort(key=lambda f: f[1])
 	return [f[0] for f in fs]
 

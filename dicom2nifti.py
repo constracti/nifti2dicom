@@ -20,7 +20,7 @@ args = parser.parse_args()
 
 # find DICOM files
 assert os.path.isdir(args.dir), "{} is not a directory".format(args.dir)
-dicoms = dicomtools.listdir(args.dir)
+dicoms = dicomtools.dir_list_files(args.dir)
 assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(args.dir)
 
 # read first and last DICOM files
@@ -31,9 +31,13 @@ dicom2 = pydicom.dcmread(dicoms[-1], stop_before_pixels=True)
 DT = numpy.int16
 
 # build DICOM affine
-csa_image_header_info = csa2.decode(dicom1[0x0029, 0x1010].value)
-if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
-	nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
+private_creator = dicom1[0x0029, 0x0010].value
+if private_creator == "SIEMENS CSA HEADER":
+	csa_image_header_info = csa2.decode(dicom1[0x0029, 0x1010].value)
+	if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
+		nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
+	else:
+		nslices = 1
 else:
 	nslices = 1
 X = numpy.array(dicom1.ImageOrientationPatient[0:3])
@@ -123,5 +127,7 @@ dst_path = os.path.join(args.dir, dicom1.ProtocolName + datetime.datetime.now().
 assert not os.path.exists(dst_path)
 print("writing NIfTI file {}".format(dst_path))
 nibabel.save(nifti, dst_path)
+
+# TODO --oriented
 
 print("complete")
