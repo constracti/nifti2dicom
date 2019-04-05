@@ -3,6 +3,7 @@
 reconstruct DICOM files given one NIfTI and two DICOM files
 
 ## Dependencies
+
 1. [Python 3.x](https://www.python.org/)
 2. [NumPy](http://www.numpy.org/)
    > NumPy is the fundamental package for scientific computing with Python.
@@ -45,6 +46,28 @@ At least two DICOM files must be present in the directory of the NIfTI files.
 
 ## Tools
 
+### dicomsplit
+
+Place each DICOM file in a subdirectory according to Protocol Name.
+
+```
+./dicomsplit.py [-m] [-f] [-v] path
+```
+
+#### positional arguments:
+
+* `path`
+   directory of mixed DICOM files
+
+#### optional arguments:
+
+* `-m`, `--help`
+  move files instead of copying
+* `-f`, `--force`
+  overwrite existing subdirectories
+* `-v`, `--verbose`
+  print actions
+
 ### dicomdiff
 
 Print the difference of the headers between two DICOM files.
@@ -58,7 +81,7 @@ Print the difference of the headers between two DICOM files.
 Compare data of all corresponding DICOM files in two directories.
 
 ```
-./dicomcmp.py [--verbose] dir1 dir2
+./dicomcmp.py [-v] dir1 dir2
 ```
 
 Returns 0 on success or 1 on failure.
@@ -81,7 +104,10 @@ Compare data of two NIfTI files.
 ./nifticmp.py nii1 nii2
 ```
 
+Returns 0 on success or 1 on failure.
+
 ## References
+
 * [Defining the DICOM orientation](http://nipy.org/nibabel/dicom/dicom_orientation.html)
 * [Siemens mosaic format](http://nipy.org/nibabel/dicom/dicom_mosaic.html)
 * [Siemens format DICOM with CSA header](http://nipy.org/nibabel/dicom/siemens_csa.html)

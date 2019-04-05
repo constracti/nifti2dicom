@@ -9,7 +9,7 @@ import pydicom
 parser = argparse.ArgumentParser(description="Place each DICOM file in a subdirectory according to Protocol Name.")
 parser.add_argument("path", help="directory of mixed DICOM files")
 parser.add_argument("-m", "--move", action="store_true", help="move files instead of copying")
-parser.add_argument("-f", "--force", action="store_true", help="overwrite existing subidrectories")
+parser.add_argument("-f", "--force", action="store_true", help="overwrite existing subdirectories")
 parser.add_argument("-v", "--verbose", action="store_true", help="print actions")
 args = parser.parse_args()
 
