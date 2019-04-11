@@ -20,35 +20,53 @@ reconstruct DICOM files given one NIfTI and two DICOM files
    ```
    pip3 install pydicom
    ```
+5. (recommended) [Unidecode](https://pypi.org/project/Unidecode/)
+   > ASCII transliterations of Unicode text.
+   ```
+   pip3 install unidecode
+   ```
 
 ## Usage
 
 ### dicom2nifti
 
-Collect all DICOM files from directory `dir` and create a NIfTI file in the same directory.
+Split directory by series in case DICOM files belong to different series (files are copied).
+
+Then, convert each set of DICOM files to a NIfTI file.
 
 ```
-./dicom2nifti.py dir
+./dicom2nifti.py path
 ```
 
-At least two DICOM files must be present in the directory.
+#### positional arguments:
+
+* `path`
+   directory of DICOM files
+
+Each series must contain at least two DICOM files.
 
 ### nifti2dicom
 
-Collect all NIfTI files from directory `src` and create a subdirectory with DICOM files for each of them.
-`src` can also be a NIfTI file, in which case only that NIfTI file will be taken into account.
+Convert each NIfTI file in a directory to a set of DICOM files.
 
 ```
-./nifti2dicom.py src
+./nifti2dicom.py path
 ```
+
+#### positional arguments:
+
+* `path`
+   directory of NIfTI files or path of a NIfTI file
 
 At least two DICOM files must be present in the directory of the NIfTI files.
+
+In case `path` holds the path of a NIfTI file, only that NIfTI file will be taken into account.
 
 ## Tools
 
 ### dicomsplit
 
-Place each DICOM file in a subdirectory according to Protocol Name.
+Place each DICOM file in a subdirectory according to Protocol Name and Series Number.
 
 ```
 ./dicomsplit.py [-m] [-f] [-v] path
@@ -61,10 +79,12 @@ Place each DICOM file in a subdirectory according to Protocol Name.
 
 #### optional arguments:
 
-* `-m`, `--help`
+* `-m`, `--move`
   move files instead of copying
 * `-f`, `--force`
   overwrite existing subdirectories
+* `-s`, `--single`
+  run even if all DICOM files belong to the same series
 * `-v`, `--verbose`
   print actions
 
@@ -84,9 +104,15 @@ Compare data of all corresponding DICOM files in two directories.
 ./dicomcmp.py [-v] dir1 dir2
 ```
 
-Returns 0 on success or 1 on failure.
+#### optional arguments:
 
-Include `--verbose` (`-v`) to print the result of each comparison.
+* `-v`, `--verbose`
+  print the result of each comparison
+
+#### return values:
+
+* `0` on success
+* `1` on failure
 
 ### niftidiff
 
@@ -104,7 +130,10 @@ Compare data of two NIfTI files.
 ./nifticmp.py nii1 nii2
 ```
 
-Returns 0 on success or 1 on failure.
+#### return values:
+
+* `0` on success
+* `1` on failure
 
 ## References
 

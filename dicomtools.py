@@ -1,9 +1,16 @@
 import os
 import re
+import math
 import datetime
 
 import numpy
 import pydicom
+try:
+	import unidecode
+except ImportError:
+	pass
+
+import csa2
 
 def file_is_valid(filename):
 	try:
@@ -26,6 +33,62 @@ def dir_list_files(path="."):
 	fs = [f for f in fs if f[1] is not None]
 	fs.sort(key=lambda f: f[1])
 	return [f[0] for f in fs]
+
+def get_series(dataset):
+	if type(dataset) is str:
+		dataset = pydicom.dcmread(dataset, specific_tags=["SeriesNumber", "ProtocolName"])
+	series = "{}-s{:03d}".format(dataset.ProtocolName, dataset.SeriesNumber)
+	try:
+		series = unidecode.unidecode(series)
+	except NameError:
+		pass
+	return re.sub("[^a-zA-Z0-9]+", "-", series)
+
+def get_affine(dataset1, dataset2):
+	# number of slices
+	nslices = 1
+	private_creator = dataset1[0x0029, 0x0010].value
+	if private_creator == "SIEMENS CSA HEADER":
+		csa_image_header_info = csa2.decode(dataset1[0x0029, 0x1010].value)
+		if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
+			nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
+	# shape, zooms & affine
+	# http://nipy.org/nibabel/dicom/dicom_orientation.html
+	X = numpy.array(dataset1.ImageOrientationPatient[0:3])
+	Y = numpy.array(dataset1.ImageOrientationPatient[3:6])
+	T = numpy.array(dataset1.ImagePositionPatient)
+	zooms = numpy.flip(numpy.array(dataset1.PixelSpacing))
+	if nslices > 1:
+		# http://nipy.org/nibabel/dicom/dicom_mosaic.html
+		nblocks = math.ceil(math.sqrt(nslices))
+		shape = numpy.array([
+			dataset1.Columns // nblocks,
+			dataset1.Rows // nblocks,
+			nslices,
+			dataset2.InstanceNumber - dataset1.InstanceNumber + 1
+		])
+		zooms = numpy.append(zooms, [
+			dataset1.SpacingBetweenSlices if "SpacingBetweenSlices" in dataset1 else dataset1.SliceThickness,
+			dataset1.RepetitionTime / 1000,
+		])
+		Z = numpy.array(csa_image_header_info["SliceNormalVector"]["Data"][:3]).astype(float)
+		T += numpy.column_stack((X, Y)) * zooms[:2] @ (numpy.array([dataset1.Columns, dataset1.Rows]) - shape[:2]) / 2
+	else:
+		shape = numpy.array([
+			dataset1.Columns,
+			dataset1.Rows,
+			dataset2.InstanceNumber - dataset1.InstanceNumber + 1
+		])
+		Z = (numpy.array(dataset2.ImagePositionPatient) - numpy.array(dataset1.ImagePositionPatient)) / (dataset2.InstanceNumber - dataset1.InstanceNumber)
+		zooms = numpy.append(zooms, numpy.linalg.norm(Z))
+		Z /= zooms[2]
+	R = numpy.column_stack((X, Y, Z))
+	affine = numpy.concatenate((R * zooms[:3], T[numpy.newaxis].T), axis=1)
+	affine = numpy.concatenate((affine, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
+	# convert DICOM LPS to NIfTI RAS coordinate system
+	affine[:2, :] *= -1
+	# return
+	return shape, zooms, affine
 
 def _prop(dataset, tag):
 	if type(tag) is str:

@@ -13,137 +13,111 @@ import numpy
 import nibabel
 import pydicom
 
-import csa2
 import dicomtools
 
-# parse arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("src", help="source NIfTI file or directory")
-args = parser.parse_args()
-
-# find NIfTI file
-if os.path.isfile(args.src):
-	assert re.search("\.nii(?:\.gz)$", args.src, flags=re.I), "{} is not a NIfTI file".format(args.src)
-	src_list = [args.src]
-	src_dir = os.path.dirname(args.src)
-elif os.path.isdir(args.src):
-	src_dir = args.src
-	src_list = [os.path.join(args.src, f) for f in os.listdir(args.src) if re.search("\.nii(?:\.gz)$", f, flags=re.I)]
-	assert src_list, "{} does not contain any NIfTI file".format(args.src)
-else:
-	assert False, "{} is not a file nor a directory".format(args.src)
-
-# find DICOM files
-# select first and last DICOM files in the directory of the NIfTI file
-dicoms = dicomtools.dir_list_files(src_dir)
-assert len(dicoms) >= 2, "{} does not contain at least two DICOM files".format(src_dir)
-dcm1 = dicoms[0]
-dcm2 = dicoms[-1]
-del dicoms
-
-# read DICOM datasets
-ds1 = pydicom.dcmread(dcm1, stop_before_pixels=True)
-ds2 = pydicom.dcmread(dcm2, stop_before_pixels=True)
-
-# build DICOM affine
-# http://nipy.org/nibabel/dicom/dicom_orientation.html
-private_creator = ds1[0x0029, 0x0010].value
-if private_creator == "SIEMENS CSA HEADER":
-	csa_image_header_info = csa2.decode(ds1[0x0029, 0x1010].value)
-	if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
-		nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])
+def nifti2dicom(path):
+	# find NIfTI files
+	if os.path.isfile(path):
+		assert re.search("\.nii(?:\.gz)$", path, flags=re.I), "{} is not a NIfTI file".format(path)
+		niftipaths = [path]
+		dirpath = os.path.dirname(path)
+	elif os.path.isdir(path):
+		niftipaths = [os.path.join(path, filename) for filename in os.listdir(path) if re.search("\.nii(?:\.gz)$", filename, flags=re.I)]
+		dirpath = path
 	else:
-		nslices = 1
-else:
-	nslices = 1
-Xxyz = numpy.array(ds1.ImageOrientationPatient[0:3])
-Yxyz = numpy.array(ds1.ImageOrientationPatient[3:6])
-Sxyz = numpy.flip(numpy.array(ds1.PixelSpacing))
-if nslices > 1:
-	Zxyz = numpy.array(csa_image_header_info["SliceNormalVector"]["Data"][0:3]).astype(float)
-	Sxyz = numpy.append(Sxyz, ds1.SpacingBetweenSlices if "SpacingBetweenSlices" in ds1 else ds1.SliceThickness)
-else:
-	Zxyz = (numpy.array(ds2.ImagePositionPatient) \
-		- numpy.array(ds1.ImagePositionPatient)) \
-		/ (ds2.InstanceNumber - ds1.InstanceNumber)
-	Sxyz = numpy.append(Sxyz, numpy.linalg.norm(Zxyz))
-	Zxyz /= Sxyz[2]
+		assert False, "{} is neither a file nor a directory".format(path)
+	# find DICOM files
+	dicompaths = dicomtools.dir_list_files(dirpath)
+	assert len(dicompaths) >= 2, "directory {} must contain at least two DICOM files".format(dirpath)
+	# read first and last DICOM files
+	dataset1 = pydicom.dcmread(dicompaths[0], stop_before_pixels=True)
+	dataset2 = pydicom.dcmread(dicompaths[-1], stop_before_pixels=True)
+	# calculate NIfTI affine
+	shape, zooms, affine = dicomtools.get_affine(dataset1, dataset2)
+	# prepare common DICOM dataset
+	dataset = copy.deepcopy(dataset1)
+	# Window Explanation Algorithm not specified
+	# (0x0028, 0x1050) Window Center
+	dataset.pop((0x0028, 0x1050), None)
+	# (0x0028, 0x1051) Window Width
+	dataset.pop((0x0028, 0x1051), None)
+	# (0x0028, 0x1055) Window Center & Width Explanation
+	dataset.pop((0x0028, 0x1055), None)
+	for nifticnt, niftipath in enumerate(niftipaths):
+		print("reading [{}/{}] NIfTI file {}".format(nifticnt + 1, len(niftipaths), niftipath))
+		# reorient NIfTI image
+		nifti = nibabel.load(niftipath)
+		ornt = nibabel.io_orientation(numpy.linalg.solve(affine, nifti.get_affine()))
+		nifti = nifti.as_reoriented(ornt)
+		shape = nifti.get_shape()
+		# prepare DICOM pixel data by transposing NIfTI data
+		data = numpy.asarray(nifti.dataobj).swapaxes(0, 1)
+		# customize common DICOM dataset
+		dataset.ProtocolName = re.sub("\.nii(?:\.gz)$", "", os.path.split(niftipath)[-1], flags=re.I)
+		dataset.SeriesInstanceUID = pydicom.uid.generate_uid()
+		# save DICOM files
+		subdirname = dicomtools.get_series(dataset) + datetime.datetime.now().strftime("-%Y%m%d%H%M%S")
+		subdirpath = os.path.join(dirpath, subdirname)
+		assert not os.path.exists(subdirpath)
+		os.mkdir(subdirpath)
+		for f in range(shape[-1]):
+			dicomname = str(f).zfill(math.floor(math.log10(shape[-1])) + 1) + ".dcm"
+			dicompath = os.path.join(subdirpath, dicomname)
+			# (0x0020, 0x0013) Instance Number
+			dataset.InstanceNumber = f + 1
+			# Slice Number MR
+			if (0x2001, 0x100a) in dataset:
+				dataset[0x2001, 0x100a].value = f + 1
+			dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], dataset, dataset1, dataset2)
+			# NOTE (0x0008, 0x0018) SOP Instance UID
+			# NOTE (0x0029, 0x1010) CSA Image Header Info
+			if len(shape) == 4:
+				dataset.AcquisitionNumber = f + 1
+				# (0x0019, 0x1016) [TimeAfterStart]
+				dicomtools.linear_float((0x0019, 0x1016), dataset, dataset1, dataset2)
+				data_slice = numpy.zeros((dataset.Rows, dataset.Columns), data.dtype)
+				jinc = shape[1]
+				jbeg, jend = 0, jinc
+				iinc = shape[0]
+				ibeg, iend = 0, iinc
+				for k in range(shape[2]):
+					data_slice[jbeg:jend, ibeg:iend] = data[:, :, k, f]
+					ibeg, iend = ibeg + iinc, iend + iinc
+					if iend > dataset1.Columns:
+						ibeg, iend = 0, iinc
+						jbeg, jend = jbeg + jinc, jend + jinc
+				# NOTE (0x0008, 0x2112) Source Image Sequence
+			else:
+				# (0x0019, 0x1016) [SlicePosition_PCS]
+				if (0x0019, 0x1016) in dataset:
+					dicomtools.linear_float_array((0x0019, 0x1015), dataset, dataset1, dataset2)
+				# (0x0019, 0x1016) [TimeAfterStart]
+				if (0x0019, 0x1016) in dataset:
+					dicomtools.linear_float((0x0019, 0x1016), dataset, dataset1, dataset2)
+				# (0x0020, 0x0032) Image Position (Patient)
+				dicomtools.linear_float_array((0x0020, 0x0032), dataset, dataset1, dataset2)
+				# (0x0020, 0x1041) Slice Location
+				dicomtools.linear_float((0x0020, 0x1041), dataset, dataset1, dataset2)
+				data_slice = data[:, :, f]
+				# NOTE (0x0051, 0x100d), e.g. SP A116.1 and SP P72.4
+			# (0x0028, 0x0106) Smallest Image Pixel Value
+			if "SmallestImagePixelValue" in dataset:
+				dataset.SmallestImagePixelValue = data_slice.min()
+			# (0x0028, 0x0107) Largest Image Pixel Value
+			if "LargestImagePixelValue" in dataset:
+				dataset.LargestImagePixelValue = data_slice.max()
+			# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
+			# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
+			# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
+			# (0x7fe0, 0x0010) Pixel Data
+			dataset.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())
+			# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
+			print("writing [{}/{}] DICOM file {}".format(f + 1, shape[-1], dicompath))
+			pydicom.dcmwrite(dicompath, dataset)
+	print("nifti2dicom complete")
 
-# calculate corresponding NIfTI affine
-Rxyz = numpy.column_stack((Xxyz, Yxyz, Zxyz)) * Sxyz
-# convert DICOM LPS to NIfTI RAS coordinate system
-Rxyz[0:2,:] *= -1
-# ignore translation part of affine transformation
-Rxyz = numpy.concatenate((Rxyz, numpy.zeros(3)[numpy.newaxis].T), axis=1)
-Rxyz = numpy.concatenate((Rxyz, numpy.array([0, 0, 0, 1])[numpy.newaxis]), axis=0)
-
-# prepare common DICOM dataset
-ds0 = copy.deepcopy(ds1)
-# Window Explanation Algorithm not specified
-ds0.pop((0x0028, 0x1050), None) # WindowCenter
-ds0.pop((0x0028, 0x1051), None) # WindowWidth
-ds0.pop((0x0028, 0x1055), None) # Window Center & Width Explanation
-
-for src in src_list:
-	# reorient NIfTI image
-	print("reading NIfTI file {}".format(src))
-	nii = nibabel.load(src)
-	ornt = nibabel.io_orientation(numpy.linalg.solve(Rxyz, nii.get_affine()))
-	nii = nii.as_reoriented(ornt)
-	L = nii.get_shape()
-	# prepare DICOM pixel data by transposing NIfTI data
-	data = numpy.asarray(nii.dataobj).swapaxes(0, 1)
-
-	# customize common DICOM dataset
-	ds0.ProtocolName = re.sub("\.nii(?:\.gz)$", "", os.path.split(src)[-1], flags=re.I)
-	ds0.SeriesInstanceUID = pydicom.uid.generate_uid()
-
-	# save DICOM files
-	dst_dir = os.path.join(src_dir, ds0.ProtocolName + datetime.datetime.now().strftime("-%Y%m%d%H%M%S"))
-	assert not os.path.exists(dst_dir)
-	os.mkdir(dst_dir)
-	for f in range(L[-1]):
-		dst = os.path.join(dst_dir, str(f).zfill(math.floor(math.log10(L[-1])) + 1) + ".dcm")
-		ds0.InstanceNumber = f + 1                                                     # (0x0020, 0x0013)
-		if (0x2001, 0x100a) in ds0:
-			ds0[0x2001, 0x100a].value = f + 1                                      # Slice Number MR
-		dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], ds0, ds1, ds2)
-		# NOTE (0x0008, 0x0018) SOP Instance UID
-		# NOTE (0x0029, 0x1010) CSA Image Header Info
-		if nslices > 1:
-			ds0.AcquisitionNumber = f + 1
-			dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2)               # [TimeAfterStart]
-			data_slice = numpy.zeros((ds0.Rows, ds0.Columns), data.dtype)
-			jinc = L[1]
-			jbeg, jend = 0, jinc
-			iinc = L[0]
-			ibeg, iend = 0, iinc
-			for k in range(L[2]):
-				data_slice[jbeg:jend, ibeg:iend] = data[:, :, k, f]
-				ibeg, iend = ibeg + iinc, iend + iinc
-				if iend > ds0.Columns:
-					ibeg, iend = 0, iinc
-					jbeg, jend = jbeg + jinc, jend + jinc
-			# NOTE (0x0008, 0x2112) Source Image Sequence
-		else:
-			if (0x0019, 0x1016) in ds0:
-				dicomtools.linear_float_array((0x0019, 0x1015), ds0, ds1, ds2) # [SlicePosition_PCS]
-			if (0x0019, 0x1016) in ds0:
-				dicomtools.linear_float((0x0019, 0x1016), ds0, ds1, ds2)       # [TimeAfterStart]
-			dicomtools.linear_float_array((0x0020, 0x0032), ds0, ds1, ds2)         # Image Position (Patient)
-			dicomtools.linear_float((0x0020, 0x1041), ds0, ds1, ds2)               # Slice Location
-			data_slice = data[:, :, f]
-			# NOTE (0x0051, 0x100d), e.g. SP A116.1 and SP P72.4
-		if "SmallestImagePixelValue" in ds0:
-			ds0.SmallestImagePixelValue = data_slice.min()                         # (0x0028, 0x0106)
-		if "LargestImagePixelValue" in ds0:
-			ds0.LargestImagePixelValue = data_slice.max()                          # (0x0028, 0x0107)
-		# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
-		# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
-		# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
-		ds0.add_new((0x7fe0, 0x0010), "OW",  data_slice.tobytes())                     # Pixel Data
-		# NOTE (0xfffc, 0xfffc) Data Set Trailing Padding
-		print("writing [{}/{}] DICOM file {}".format(str(f + 1).rjust(math.floor(math.log10(L[-1]) + 1)), L[-1], dst))
-		pydicom.dcmwrite(dst, ds0)
-
-print("complete")
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description="Convert a NIfTI file to a set of DICOM files.")
+	parser.add_argument("path", help="source NIfTI file or directory")
+	args = parser.parse_args()
+	nifti2dicom(args.path)
