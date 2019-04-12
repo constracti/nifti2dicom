@@ -47,8 +47,7 @@ def get_series(dataset):
 def get_affine(dataset1, dataset2):
 	# number of slices
 	nslices = 1
-	private_creator = dataset1[0x0029, 0x0010].value
-	if private_creator == "SIEMENS CSA HEADER":
+	if (0x0029, 0x0010) in dataset1 and dataset1[0x0029, 0x0010].value == "SIEMENS CSA HEADER":
 		csa_image_header_info = csa2.decode(dataset1[0x0029, 0x1010].value)
 		if csa_image_header_info["NumberOfImagesInMosaic"]["Data"]:
 			nslices = int(csa_image_header_info["NumberOfImagesInMosaic"]["Data"][0])

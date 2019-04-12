@@ -88,6 +88,19 @@ Place each DICOM file in a subdirectory according to Protocol Name and Series Nu
 * `-v`, `--verbose`
   print actions
 
+### dicomtable
+
+Output a table with the variable fields of a DICOM set as a CSV.
+
+```
+./dicomtable.py path
+```
+
+#### positional arguments:
+
+* `path`
+  directory of DICOM files
+
 ### dicomdiff
 
 Print the difference of the headers between two DICOM files.
