@@ -35,13 +35,18 @@ Split directory by series in case DICOM files belong to different series (files 
 Then, convert each set of DICOM files to a NIfTI file.
 
 ```
-./dicom2nifti.py path
+./dicom2nifti.py PATH
 ```
 
 #### positional arguments:
 
-* `path`
-   directory of DICOM files
+1. `PATH`
+    directory of DICOM files
+
+#### optional arguments:
+
+* `-o`, `--orient`
+  orient output NIFTI file
 
 Each series must contain at least two DICOM files.
 
@@ -50,12 +55,12 @@ Each series must contain at least two DICOM files.
 Convert each NIfTI file in a directory to a set of DICOM files.
 
 ```
-./nifti2dicom.py path
+./nifti2dicom.py PATH
 ```
 
 #### positional arguments:
 
-* `path`
+1. `PATH`
    directory of NIfTI files or path of a NIfTI file
 
 At least two DICOM files must be present in the directory of the NIfTI files.
@@ -69,12 +74,12 @@ In case `path` holds the path of a NIfTI file, only that NIfTI file will be take
 Place each DICOM file in a subdirectory according to Protocol Name and Series Number.
 
 ```
-./dicomsplit.py [-m] [-f] [-v] path
+./dicomsplit.py [-m] [-f] [-v] PATH
 ```
 
 #### positional arguments:
 
-* `path`
+1. `PATH`
    directory of mixed DICOM files
 
 #### optional arguments:
@@ -93,13 +98,13 @@ Place each DICOM file in a subdirectory according to Protocol Name and Series Nu
 Output a table with the variable fields of a DICOM set as a CSV.
 
 ```
-./dicomtable.py path
+./dicomtable.py PATH
 ```
 
 #### positional arguments:
 
-* `path`
-  directory of DICOM files
+1. `PATH`
+   directory of DICOM files
 
 ### dicomdiff
 
@@ -126,6 +131,52 @@ Compare data of all corresponding DICOM files in two directories.
 
 * `0` on success
 * `1` on failure
+
+### niftitools-header
+
+Output the header of a NIfTI file.
+
+```
+./niftitools.py header PATH
+```
+
+#### positional arguments:
+
+1. `PATH`
+   path to the NIfTI file
+
+### niftitools-affine
+
+Output the affine of a NIfTI file.
+
+```
+./niftitools.py affine PATH
+```
+
+#### positional arguments:
+
+1. `PATH`
+   path to the NIfTI file
+
+### niftitools-orient
+
+Orient a NIfTI file.
+
+```
+./niftitools.py orient [-o OUTPATH] [-d] INPATH
+```
+
+#### positional arguments:
+
+1. `INPATH`
+   path to the input NIfTI file
+
+#### optional arguments:
+
+* `-o OUTPATH`, `--outpath OUTPATH`
+  path to the output NIfTI file; default INPATH-oriented
+* `-d`, `--diagonal`
+  apply orientation only if resulting affine is close to diagonal
 
 ### niftidiff
 

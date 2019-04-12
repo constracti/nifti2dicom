@@ -9,7 +9,7 @@ import pydicom
 import dicomtools
 
 parser = argparse.ArgumentParser(description="Output a table with the variable fields of a DICOM set as a CSV.")
-parser.add_argument("path", help="directory of DICOM files")
+parser.add_argument("path", help="directory of DICOM files", metavar="PATH")
 args = parser.parse_args()
 
 assert os.path.isdir(args.path)

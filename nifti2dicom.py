@@ -165,6 +165,6 @@ def nifti2dicom(path):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Convert a NIfTI file to a set of DICOM files.")
-	parser.add_argument("path", help="source NIfTI file or directory")
+	parser.add_argument("path", help="directory of NIfTI files or path of a NIfTI file", metavar="PATH")
 	args = parser.parse_args()
 	nifti2dicom(args.path)

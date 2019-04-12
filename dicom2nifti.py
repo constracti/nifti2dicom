@@ -11,7 +11,7 @@ import nibabel
 import dicomsplit
 import dicomtools
 
-def dicom2nifti(dirpath):
+def dicom2nifti(dirpath, orient=False):
 	# find DICOM files
 	dicompaths = dicomtools.dir_list_files(dirpath)
 	assert len(dicompaths) >= 2, "{} does not contain at least two DICOM files".format(dirpath)
@@ -66,11 +66,14 @@ def dicom2nifti(dirpath):
 	nifti.header["glmin"] = 0      # unused, normally data.min()
 	# NOTE descrip
 	# NOTE qform_code, sform_code
-	# apply default NIfTI transformation
-	ornt = numpy.array([[0, 1], [1, -1], [2, 1]])
-	if numpy.linalg.det(affine[:3, :3]) < 0:
-		ornt[2, 1] = -1
-	nifti = nifti.as_reoriented(ornt)
+	if orient:
+		nifti = nibabel.as_closest_canonical(nifti)
+	else:
+		# apply default NIfTI transformation
+		ornt = numpy.array([[0, 1], [1, -1], [2, 1]])
+		if numpy.linalg.det(affine[:3, :3]) < 0:
+			ornt[2, 1] = -1
+		nifti = nifti.as_reoriented(ornt)
 	# save NIfTI file
 	niftiname = dicomtools.get_series(dataset1) + datetime.datetime.now().strftime("-%Y%m%d%H%M%S") + ".nii.gz"
 	niftipath = os.path.join(dirpath, niftiname)
@@ -81,8 +84,8 @@ def dicom2nifti(dirpath):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Convert a set of DICOM files to a NIfTI file.")
-	parser.add_argument("path", help="source DICOM files directory")
-	# TODO --oriented
+	parser.add_argument("path", help="directory of DICOM files", metavar="PATH")
+	parser.add_argument("-o", "--orient", action="store_true", help="orient output NIfTI file")
 	args = parser.parse_args()
 	assert os.path.isdir(args.path), "{} is not a directory".format(args.path)
 	# split DICOM files
@@ -93,4 +96,4 @@ if __name__ == "__main__":
 		dirpaths = [args.path]
 	# convert DICOM files
 	for dirpath in dirpaths:
-		dicom2nifti(dirpath)
+		dicom2nifti(dirpath, orient=args.orient)

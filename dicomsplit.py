@@ -65,7 +65,7 @@ def split(path, move=False, force=False, single=False, verbose=False):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Place each DICOM file in a subdirectory according to Protocol Name and Series Number.")
-	parser.add_argument("path", help="directory of mixed DICOM files")
+	parser.add_argument("path", help="directory of mixed DICOM files", metavar="PATH")
 	parser.add_argument("-m", "--move", action="store_true", help="move files instead of copying")
 	parser.add_argument("-f", "--force", action="store_true", help="overwrite existing subdirectories")
 	parser.add_argument("-s", "--single", action="store_true", help="run even if all DICOM files belong to the same series")
