@@ -35,7 +35,7 @@ Split directory by series in case DICOM files belong to different series (files 
 Then, convert each set of DICOM files to a NIfTI file.
 
 ```
-./dicom2nifti.py PATH
+./dicom2nifti.py PATH [-o]
 ```
 
 #### positional arguments:
@@ -74,7 +74,7 @@ In case `path` holds the path of a NIfTI file, only that NIfTI file will be take
 Place each DICOM file in a subdirectory according to Protocol Name and Series Number.
 
 ```
-./dicomsplit.py [-m] [-f] [-v] PATH
+./dicomsplit.py PATH [-m] [-f] [-v]
 ```
 
 #### positional arguments:
@@ -119,7 +119,7 @@ Print the difference of the headers between two DICOM files.
 Compare data of all corresponding DICOM files in two directories.
 
 ```
-./dicomcmp.py [-v] dir1 dir2
+./dicomcmp.py dir1 dir2 [-v]
 ```
 
 #### optional arguments:
@@ -163,7 +163,7 @@ Output the affine of a NIfTI file.
 Orient a NIfTI file.
 
 ```
-./niftitools.py orient [-o OUTPATH] [-d] INPATH
+./niftitools.py orient INPATH [-o OUTPATH] [-d]
 ```
 
 #### positional arguments:
