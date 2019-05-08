@@ -43,8 +43,6 @@ def nifti2dicom(path):
 	if (0x0019, 0x0010) in dataset and dataset[0x0019, 0x0010].value == "SIEMENS MR HEADER":
 		# (0x0019, 0x100b) SliceMeasurementDuration
 		dataset.pop((0x0019, 0x100b), None)
-		# (0x0019, 0x1016) TimeAfterStart
-		dataset.pop((0x0019, 0x1016), None)
 		# (0x0019, 0x1029) MosaicRefAcqTimes
 		dataset.pop((0x0019, 0x1029), None)
 	# Window Explanation Algorithm not specified
@@ -56,7 +54,7 @@ def nifti2dicom(path):
 	dataset.pop((0x0028, 0x1055), None)
 	if (0x0029, 0x0010) in dataset and dataset[0x0029, 0x0010].value == "SIEMENS CSA HEADER":
 		# (0x0029, 0x1010) CSA Image Header Info
-		dataset.pop((0x0029, 0x1010), None)
+		csa_image_header_info = dicomtools.csa2_decode(dataset[0x0029, 0x1010].value)
 	if (0x0043, 0x0010) in dataset and dataset[0x0043, 0x0010].value == "GEMS_PARM_01":
 		# (0x0043, 0x1028) Unique image iden
 		dataset.pop((0x0043, 0x1028), None)
@@ -117,6 +115,9 @@ def nifti2dicom(path):
 				# (0x0019, 0x1015) SlicePosition_PCS
 				if (0x0019, 0x1015) in dataset:
 					dicomtools.linear_float_array((0x0019, 0x1015), dataset, dataset1, dataset2)
+				# (0x0019, 0x1016) TimeAfterStart
+				if (0x0019, 0x1016) in dataset:
+					dicomtools.linear_float((0x0019, 0x1016), dataset, dataset1, dataset2)
 			elif (0x0019, 0x0010) in dataset and dataset[0x0019, 0x0010].value in ["GEMS_ACQU_01", "GEMS_IDEN_01"]:
 				# (0x0019, 0x10a2) Raw data run number
 				if (0x0019, 0x10a2) in dataset:
@@ -139,6 +140,21 @@ def nifti2dicom(path):
 			# (0x0028, 0x0107) Largest Image Pixel Value
 			if (0x0028, 0x0107) in dataset:
 				dataset[0x0028, 0x0107].value = data_slice.max()
+			if (0x0029, 0x0010) in dataset and dataset[0x0029, 0x0010].value == "SIEMENS CSA HEADER":
+				# (0x0029, 0x1010) CSA Image Header Info
+				if csa_image_header_info["Actual3DImaPartNumber"]["Data"]:
+					csa_image_header_info["Actual3DImaPartNumber"]["Data"][0] = str(f).ljust(8)
+				elif not csa_image_header_info["MosaicRefAcqTimes"]["Data"]: # TODO linear int on csa_image_header_info
+					csa_image_header_info["ProtocolSliceNumber"]["Data"][0] = str(f).ljust(8)
+				# csa_image_header_info["GSWDDataType"] CORONAL
+				# csa_image_header_info["RFSWDDataType"] CORONAL
+				# csa_image_header_info["ICE_Dims"]["Data"][0] *
+				# csa_image_header_info["MosaicRefAcqTimes"]["Data"] FMRI
+				# csa_image_header_info["SliceMeasurementDuration"]["Data"][0] CORONAL
+				csa_image_header_info["SlicePosition_PCS"]["Data"][0:3] = ["{:.8f}".format(x) for x in dataset.ImagePositionPatient]
+				if csa_image_header_info["TimeAfterStart"]["Data"]:
+					csa_image_header_info["TimeAfterStart"]["Data"][0] = "{:.8f}".format(dataset[0x0019, 0x1016].value)
+				dataset[0x0029, 0x1010].value = dicomtools.csa2_encode(csa_image_header_info)
 			if (0x2001, 0x0010) in dataset and dataset[0x2001, 0x0010].value == "Philips Imaging DD 001":
 				# (0x2001, 0x100a) Slice Number MR
 				if (0x2001, 0x100a) in dataset:
