@@ -127,7 +127,7 @@ def nifti2dicom(path):
 			elif (0x0019, 0x0010) in dataset and dataset[0x0019, 0x0010].value in ["GEMS_ACQU_01", "GEMS_IDEN_01"]:
 				# (0x0019, 0x10a2) Raw data run number
 				if (0x0019, 0x10a2) in dataset:
-					pass # TODO b"\x1a\x16\x00\x00" linear byte
+					dataset[0x0019, 0x10a2].value = (int.from_bytes(dataset1[0x0019, 0x10a2], "little") + f).to_bytes(4, "little")
 				# TODO (0x0019, 0x10??) User data ??
 			# (0x0020, 0x0032) Image Position (Patient)
 			if (0x0020, 0x0032) in dataset:
