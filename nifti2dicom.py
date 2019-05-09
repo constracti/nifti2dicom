@@ -95,7 +95,8 @@ def nifti2dicom(path):
 			# (0x0020, 0x0013) Instance Number
 			dataset.InstanceNumber = f + 1
 			# (0x0008, 0x0012) & (0x0008, 0x0013) Instance Creation Date & Time
-			dicomtools.linear_datetime("InstanceCreation", dataset, dataset1, dataset2)
+			if (0x0008, 0x0012) in dataset and (0x0008, 0x0013) in dataset:
+				dicomtools.linear_datetime("InstanceCreation", dataset, dataset1, dataset2)
 			# (0x0008, 0x0022) & (0x0008, 0x0032) Acquisition Date & Time
 			dicomtools.linear_datetime("Acquisition", dataset, dataset1, dataset2)
 			# (0x0008, 0x0023) & (0x0008, 0x0033) Content Date & Time

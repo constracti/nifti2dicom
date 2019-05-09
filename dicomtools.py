@@ -197,10 +197,12 @@ def linear_float_array(tag, ds0, ds1, ds2):
 	ds0[tag].value = v0
 
 def linear_datetime(tag, ds0, ds1, ds2):
+	fd = "%Y%m%d"
+	ft = "%H%M%S.%f" if "." in ds0.data_element(tag + "Time").value else "%H%M%S"
 	v1 = ds1.data_element(tag + "Date").value + ds1.data_element(tag + "Time").value
-	v1 = datetime.datetime.strptime(v1, "%Y%m%d%H%M%S.%f")
+	v1 = datetime.datetime.strptime(v1, fd + ft)
 	v2 = ds2.data_element(tag + "Date").value + ds2.data_element(tag + "Time").value
-	v2 = datetime.datetime.strptime(v2, "%Y%m%d%H%M%S.%f")
+	v2 = datetime.datetime.strptime(v2, fd + ft)
 	v0 = v1 + (v2 - v1) / (ds2.InstanceNumber - ds1.InstanceNumber) * (ds0.InstanceNumber - ds1.InstanceNumber)
-	ds0.data_element(tag + "Date").value = datetime.datetime.strftime(v0, "%Y%m%d")
-	ds0.data_element(tag + "Time").value = datetime.datetime.strftime(v0, "%H%M%S.%f")
+	ds0.data_element(tag + "Date").value = datetime.datetime.strftime(v0, fd)
+	ds0.data_element(tag + "Time").value = datetime.datetime.strftime(v0, ft)
