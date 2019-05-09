@@ -94,7 +94,12 @@ def nifti2dicom(path):
 			dicompath = os.path.join(subdirpath, dicomname)
 			# (0x0020, 0x0013) Instance Number
 			dataset.InstanceNumber = f + 1
-			dicomtools.linear_datetime(["InstanceCreation", "Acquisition", "Content"], dataset, dataset1, dataset2)
+			# (0x0008, 0x0012) & (0x0008, 0x0013) Instance Creation Date & Time
+			dicomtools.linear_datetime("InstanceCreation", dataset, dataset1, dataset2)
+			# (0x0008, 0x0022) & (0x0008, 0x0032) Acquisition Date & Time
+			dicomtools.linear_datetime("Acquisition", dataset, dataset1, dataset2)
+			# (0x0008, 0x0023) & (0x0008, 0x0033) Content Date & Time
+			dicomtools.linear_datetime("Content", dataset, dataset1, dataset2)
 			if len(shape) == 4: # TODO nifti2dicom DTI
 				# (0x0020, 0x0012) Acquisition Number
 				dataset.AcquisitionNumber = f + 1
