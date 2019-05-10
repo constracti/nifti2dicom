@@ -31,6 +31,7 @@ def nifti2dicom(path):
 	dataset2 = pydicom.dcmread(dicompaths[-1], stop_before_pixels=True)
 	# calculate NIfTI affine
 	shape, zooms, affine = dicomtools.get_affine(dataset1, dataset2)
+	# TODO check compatibility
 	for nifticnt, niftipath in enumerate(niftipaths):
 		print("reading [{}/{}] NIfTI file {}".format(nifticnt + 1, len(niftipaths), niftipath))
 		# reorient NIfTI image
@@ -72,6 +73,12 @@ def nifti2dicom(path):
 			# (0x0028, 0x0107) Largest Image Pixel Value
 			if (0x0028, 0x0107) in dataset:
 				dataset[0x0028, 0x0107].value = data_slice.max()
+			# (0x0028, 0x1052) Rescale Intercept
+			if (0x0028, 0x1052) in dataset:
+				dataset[0x0028, 0x1052].value = 0
+			# (0x0028, 0x1053) Rescale Slope
+			if (0x0028, 0x1053) in dataset:
+				dataset[0x0028, 0x1053].value = 1
 			# assuming data.dtype.itemsize == 2; thus VR="OW" (Other Word) and not "OB" (Other Byte)
 			# http://dicom.nema.org/medical/dicom/current/output/chtml/part03/sect_C.7.6.3.html
 			# http://dicom.nema.org/medical/dicom/current/output/chtml/part05/sect_6.2.html
