@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+
+import argparse
 import os
 import re
 import math
@@ -206,3 +209,16 @@ def linear_datetime(tag, ds0, ds1, ds2):
 	v0 = v1 + (v2 - v1) / (ds2.InstanceNumber - ds1.InstanceNumber) * (ds0.InstanceNumber - ds1.InstanceNumber)
 	ds0.data_element(tag + "Date").value = datetime.datetime.strftime(v0, fd)
 	ds0.data_element(tag + "Time").value = datetime.datetime.strftime(v0, ft)
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	subparsers = parser.add_subparsers(dest="action", help="one of the following actions", metavar="ACTION")
+	subparsers.required = True
+	parser_header = subparsers.add_parser("dataset", description="Output the dataset of a DICOM file.", epilog="""
+	Pixel Data (0x7fe0, 0x0010) and Data Set Trailing Padding (0xfffc, 0xfffc) tags are ignored.
+	""", help="output the dataset of a DICOM file")
+	parser_header.add_argument("path", help="path to the DICOM file", metavar="PATH")
+	args = parser.parse_args()
+	if args.action == "dataset":
+		dataset = pydicom.dcmread(args.path, stop_before_pixels=True)
+		print(dataset)

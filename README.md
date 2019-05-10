@@ -88,6 +88,21 @@ In case `PATH` holds the path of a NIfTI file, only that NIfTI file is taken und
 
 ## Tools
 
+### dicomtools-dataset
+
+Output the dataset of a DICOM file.
+
+```
+./dicomtools.py dataset PATH
+```
+
+#### positional arguments:
+
+1. `PATH`
+   path to the NIfTI file
+
+Pixel Data (0x7fe0, 0x0010) and Data Set Trailing Padding (0xfffc, 0xfffc) tags are ignored.
+
 ### dicomsplit
 
 Place each DICOM file in a subdirectory according to Protocol Name and Series Number.
