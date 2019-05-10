@@ -67,6 +67,25 @@ At least two DICOM files must be present in the directory of the NIfTI files.
 
 In case `path` holds the path of a NIfTI file, only that NIfTI file will be taken into account.
 
+### nifti2dicom2
+
+```
+./nifti2dicom2.py PATH
+```
+
+Convert NIfTI files to DICOM.
+
+#### positional arguments:
+
+1. `PATH`
+   directory of NIfTI files or path of a NIfTI file
+
+A set of DICOM files is located in `PATH`.
+Then, for each NIfTI file in `PATH`, a subdirectory is created with a copy of the DICOM.
+Pixel Data (0x7fe0, 0x0010) in every copy of the original DICOM set is replaced by image data of the corresponding NIfTI file.
+The Data Set Trailing Padding (0xfffc, 0xfffc) tag is ignored.
+In case `PATH` holds the path of a NIfTI file, only that NIfTI file is taken under consideration, while the DICOM files set is located in the directory of the NIFTI file.
+
 ## Tools
 
 ### dicomsplit
