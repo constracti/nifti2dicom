@@ -40,6 +40,9 @@ def nifti2dicom(path):
 		if not numpy.all(shape == nifti.get_shape()):
 			print("skipping NIfTI file: incompatible shape")
 			continue
+		# customize common DICOM tags
+		protocol_name = re.sub("\.nii(?:\.gz)$", "", os.path.split(niftipath)[-1], flags=re.I)
+		series_instance_uid = pydicom.uid.generate_uid()
 		# prepare DICOM pixel data by transposing NIfTI data
 		data = numpy.asarray(nifti.dataobj).swapaxes(0, 1)
 		# save DICOM files
@@ -67,6 +70,12 @@ def nifti2dicom(path):
 						jbeg, jend = jbeg + jinc, jend + jinc
 			else:
 				data_slice = data[:, :, dicomcnt]
+			# (0x0018, 0x1030) Protocol Name
+			if (0x0018, 0x1030) in dataset:
+				dataset[0x0018, 0x1030].value = protocol_name
+			# (0x0020, 0x000e) Series Instance UID
+			if (0x0020, 0x000e) in dataset:
+				dataset[0x0020, 0x000e].value = series_instance_uid
 			# (0x0028, 0x0106) Smallest Image Pixel Value
 			if (0x0028, 0x0106) in dataset:
 				dataset[0x0028, 0x0106].value = data_slice.min()
