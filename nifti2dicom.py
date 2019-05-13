@@ -45,13 +45,6 @@ def nifti2dicom(path):
 		dataset.pop((0x0019, 0x100b), None)
 		# (0x0019, 0x1029) MosaicRefAcqTimes
 		dataset.pop((0x0019, 0x1029), None)
-	# Window Explanation Algorithm not specified
-	# (0x0028, 0x1050) Window Center
-	dataset.pop((0x0028, 0x1050), None)
-	# (0x0028, 0x1051) Window Width
-	dataset.pop((0x0028, 0x1051), None)
-	# (0x0028, 0x1055) Window Center & Width Explanation
-	dataset.pop((0x0028, 0x1055), None)
 	if (0x0029, 0x0010) in dataset and dataset[0x0029, 0x0010].value == "SIEMENS CSA HEADER":
 		# (0x0029, 0x1010) CSA Image Header Info
 		csa_image_header_info = dicomtools.csa2_decode(dataset[0x0029, 0x1010].value)
@@ -146,6 +139,16 @@ def nifti2dicom(path):
 			# (0x0028, 0x0107) Largest Image Pixel Value
 			if (0x0028, 0x0107) in dataset:
 				dataset[0x0028, 0x0107].value = data_slice.max()
+			# (0x0028, 0x1050) Window Center
+			# (0x0028, 0x1051) Window Width
+			if (0x0028, 0x1050) in dataset and (0x0028, 0x1051) in dataset:
+				dicomtools.autobrightness(dataset, data_slice)
+			# (0x0028, 0x1052) Rescale Intercept
+			if (0x0028, 0x1052) in dataset:
+				dataset[0x0028, 0x1052].value = 0
+			# (0x0028, 0x1053) Rescale Slope
+			if (0x0028, 0x1053) in dataset:
+				dataset[0x0028, 0x1053].value = 1
 			if (0x0029, 0x0010) in dataset and dataset[0x0029, 0x0010].value == "SIEMENS CSA HEADER":
 				# (0x0029, 0x1010) CSA Image Header Info
 				if csa_image_header_info["Actual3DImaPartNumber"]["Data"]:

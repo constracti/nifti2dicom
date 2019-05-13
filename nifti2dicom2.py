@@ -53,7 +53,6 @@ def nifti2dicom(path):
 			newdicomname = str(dicomcnt).zfill(dicomlog) + ".dcm"
 			newdicompath = os.path.join(subdirpath, newdicomname)
 			dataset = pydicom.dcmread(dicompath, stop_before_pixels=True)
-			assert dataset.InstanceNumber == dicomcnt + 1
 			if len(shape) == 4: # TODO nifti2dicom DTI
 				data_slice = numpy.zeros((dataset.Rows, dataset.Columns), data.dtype)
 				jinc = shape[1]
@@ -74,6 +73,10 @@ def nifti2dicom(path):
 			# (0x0028, 0x0107) Largest Image Pixel Value
 			if (0x0028, 0x0107) in dataset:
 				dataset[0x0028, 0x0107].value = data_slice.max()
+			# (0x0028, 0x1050) Window Center
+			# (0x0028, 0x1051) Window Width
+			if (0x0028, 0x1050) in dataset and (0x0028, 0x1051) in dataset:
+				dicomtools.autobrightness(dataset, data_slice)
 			# (0x0028, 0x1052) Rescale Intercept
 			if (0x0028, 0x1052) in dataset:
 				dataset[0x0028, 0x1052].value = 0

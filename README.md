@@ -103,6 +103,21 @@ Output the dataset of a DICOM file.
 
 Pixel Data (0x7fe0, 0x0010) and Data Set Trailing Padding (0xfffc, 0xfffc) tags are ignored.
 
+### dicomtools-autobrightness
+
+Auto-adjust brightness and contrast of a DICOM file.
+
+```
+./dicomtools.py autobrightness PATH
+```
+
+#### positional arguments:
+
+1. `PATH`
+   path of a DICOM file or directory of a set of DICOM files
+
+Only (0x0028, 0x1050) Window Center and (0x0028, 0x1051) Window Width tags are affected.
+
 ### dicomsplit
 
 Place each DICOM file in a subdirectory according to Protocol Name and Series Number.
