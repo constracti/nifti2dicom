@@ -31,14 +31,15 @@ def nifti2dicom(path):
 	dataset2 = pydicom.dcmread(dicompaths[-1], stop_before_pixels=True)
 	# calculate NIfTI affine
 	shape, zooms, affine = dicomtools.get_affine(dataset1, dataset2)
-	# TODO check compatibility
 	for nifticnt, niftipath in enumerate(niftipaths):
 		print("reading [{}/{}] NIfTI file {}".format(nifticnt + 1, len(niftipaths), niftipath))
 		# reorient NIfTI image
 		nifti = nibabel.load(niftipath)
 		ornt = nibabel.io_orientation(numpy.linalg.solve(affine, nifti.get_affine()))
 		nifti = nifti.as_reoriented(ornt)
-		shape = nifti.get_shape()
+		if not numpy.all(shape == nifti.get_shape()):
+			print("skipping NIfTI file: incompatible shape")
+			continue
 		# prepare DICOM pixel data by transposing NIfTI data
 		data = numpy.asarray(nifti.dataobj).swapaxes(0, 1)
 		# save DICOM files
