@@ -70,6 +70,9 @@ def nifti2dicom(path):
 						jbeg, jend = jbeg + jinc, jend + jinc
 			else:
 				data_slice = data[:, :, dicomcnt]
+			# (0x0008, 0x103e) Series Description
+			if (0x0008, 0x103e) in dataset:
+				dataset[0x0008, 0x103e].value = protocol_name
 			# (0x0018, 0x1030) Protocol Name
 			if (0x0018, 0x1030) in dataset:
 				dataset[0x0018, 0x1030].value = protocol_name
