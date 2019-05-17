@@ -73,7 +73,7 @@ def nifti2dicom(path):
 		nifti = nifti.as_reoriented(ornt)
 		shape = nifti.get_shape()
 		# prepare DICOM pixel data by transposing NIfTI data
-		data = numpy.asarray(nifti.dataobj).swapaxes(0, 1)
+		data = nifti.get_data().swapaxes(0, 1)
 		# customize common DICOM tags
 		dataset.SeriesDescription = re.sub("\.nii(?:\.gz)$", "", os.path.split(niftipath)[-1], flags=re.I)
 		dataset.ProtocolName = dataset.SeriesDescription

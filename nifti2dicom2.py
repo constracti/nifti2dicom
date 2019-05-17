@@ -44,7 +44,7 @@ def nifti2dicom(path):
 		protocol_name = re.sub("\.nii(?:\.gz)$", "", os.path.split(niftipath)[-1], flags=re.I)
 		series_instance_uid = pydicom.uid.generate_uid()
 		# prepare DICOM pixel data by transposing NIfTI data
-		data = numpy.asarray(nifti.dataobj).swapaxes(0, 1)
+		data = nifti.get_data().swapaxes(0, 1)
 		# save DICOM files
 		subdirname = "{}-s{:03d}-{}".format(protocol_name, dataset1.SeriesNumber, datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
 		subdirpath = os.path.join(dirpath, subdirname)
