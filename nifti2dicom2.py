@@ -46,7 +46,7 @@ def nifti2dicom(path):
 		# prepare DICOM pixel data by transposing NIfTI data
 		data = numpy.asarray(nifti.dataobj).swapaxes(0, 1)
 		# save DICOM files
-		subdirname = dicomtools.get_series(dataset1) + datetime.datetime.now().strftime("-%Y%m%d%H%M%S")
+		subdirname = "{}-s{:03d}-{}".format(protocol_name, dataset1.SeriesNumber, datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
 		subdirpath = os.path.join(dirpath, subdirname)
 		assert not os.path.exists(subdirpath)
 		os.mkdir(subdirpath)

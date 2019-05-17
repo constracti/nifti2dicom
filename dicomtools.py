@@ -36,10 +36,10 @@ def dir_list_files(path="."):
 	fs.sort(key=lambda f: f[1])
 	return [f[0] for f in fs]
 
-def get_series(dataset):
-	if type(dataset) is str:
-		dataset = pydicom.dcmread(dataset, specific_tags=["SeriesNumber", "ProtocolName"])
-	series = "{}-s{:03d}".format(dataset.ProtocolName, dataset.SeriesNumber)
+def get_series(dicom):
+	if type(dicom) is str:
+		dicom = pydicom.dcmread(dicom, specific_tags=["SeriesNumber", "ProtocolName"])
+	series = "{}-s{:03d}".format(dicom.ProtocolName, dicom.SeriesNumber)
 	try:
 		series = unidecode.unidecode(series)
 	except NameError:
