@@ -91,44 +91,6 @@ def get_affine(dataset1, dataset2):
 	# return
 	return shape, zooms, affine
 
-def autobrightness(dataset, data = None):
-	assert (0x0028, 0x1050) in dataset and (0x0028, 0x1051) in dataset
-	if data is None:
-		data = dataset.pixel_array
-	# (0x0028, 0x0106) Smallest Image Pixel Value
-	if (0x0028, 0x0106) in dataset:
-		data_min = dataset[0x0028, 0x0106].value
-	else:
-		data_min = data.min()
-	# (0x0028, 0x0107) Largest Image Pixel Value
-	if (0x0028, 0x0107) in dataset:
-		data_max = dataset[0x0028, 0x0107].value
-	else:
-		data_max = data.max()
-	"""
-	data_sorted = numpy.sort(data.flatten())
-	data_len = len(data_sorted)
-	assert data_len > 1
-	data_min = data_sorted[0]
-	data_inf = data_sorted[-1]
-	step = (data_inf - data_min) / 100
-	i = data_len - 1
-	while i > 0 and data_sorted[i] - data_sorted[i-1] < step:
-		i -= 1
-	if i > 0:
-		data_max = (data_sorted[i-1] - data_min) * 1.1 + data_min
-		if data_max > data_inf:
-			data_max = data_inf
-	else:
-		data_max = data_inf
-	"""
-	window_width = data_max - data_min + 1
-	window_center = data_min + window_width / 2
-	# (0x0028, 0x1050) Window Center
-	dataset[0x0028, 0x1050].value = window_center
-	# (0x0028, 0x1051) Window Width
-	dataset[0x0028, 0x1051].value = window_width
-
 
 ########
 # csa2 #
@@ -270,14 +232,3 @@ if __name__ == "__main__":
 	if args.action == "dataset":
 		dataset = pydicom.dcmread(args.path, stop_before_pixels=True)
 		print(dataset)
-	elif args.action == "autobrightness":
-		if os.path.isfile(args.path):
-			dicompaths = [args.path]
-		elif os.path.isdir(args.path):
-			dicompaths = dir_list_files(args.path)
-		else:
-			assert False
-		for dicompath in dicompaths:
-			dataset = pydicom.dcmread(dicompath)
-			autobrightness(dataset)
-			pydicom.dcmwrite(dicompath, dataset)

@@ -4,6 +4,7 @@ import argparse
 import os
 import re
 
+import numpy
 import nibabel
 
 def file_is_valid(filename):
@@ -20,6 +21,29 @@ def orient(nifti, outpath=None, diagonal=False):
 	if outpath is not None:
 		nibabel.save(nifti, outpath)
 	return nifti
+
+def autowindowing(nifti):
+	if type(nifti) is str:
+		nifti = nibabel.load(nifti)
+	data = nifti.get_data().flatten()
+	if data.size > 1<<16:
+		data = numpy.random.choice(data, 1<<16)
+	hist, bins = numpy.histogram(data, bins=1<<8)
+	if hist[-2]:
+		# marks are not separated
+		minval = bins[0]
+		maxval = bins[-1]
+	else:
+		# marks are separated
+		i = -3
+		while not hist[i]:
+			i -= 1
+		minval = bins[0]
+		maxval = bins[i]
+		maxval = minval + (maxval - minval) * 1.1
+		if maxval > bins[-1]:
+			maxval = bins[-1]
+	return (minval + maxval) / 2, maxval - minval
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

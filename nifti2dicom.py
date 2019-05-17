@@ -14,6 +14,7 @@ import nibabel
 import pydicom
 
 import dicomtools
+import niftitools
 
 def nifti2dicom(path):
 	# find NIfTI files
@@ -78,6 +79,7 @@ def nifti2dicom(path):
 		dataset.SeriesDescription = re.sub("\.nii(?:\.gz)$", "", os.path.split(niftipath)[-1], flags=re.I)
 		dataset.ProtocolName = dataset.SeriesDescription
 		dataset.SeriesInstanceUID = pydicom.uid.generate_uid()
+		dataset.WindowCenter, dataset.WindowWidth = niftitools.autowindowing(nifti)
 		# save DICOM files
 		subdirname = dicomtools.get_series(dataset) + datetime.datetime.now().strftime("-%Y%m%d%H%M%S")
 		subdirpath = os.path.join(dirpath, subdirname)
@@ -140,10 +142,6 @@ def nifti2dicom(path):
 			# (0x0028, 0x0107) Largest Image Pixel Value
 			if (0x0028, 0x0107) in dataset:
 				dataset[0x0028, 0x0107].value = data_slice.max()
-			# (0x0028, 0x1050) Window Center
-			# (0x0028, 0x1051) Window Width
-			if (0x0028, 0x1050) in dataset and (0x0028, 0x1051) in dataset:
-				dicomtools.autobrightness(dataset, data_slice)
 			# (0x0028, 0x1052) Rescale Intercept
 			if (0x0028, 0x1052) in dataset:
 				dataset[0x0028, 0x1052].value = 0

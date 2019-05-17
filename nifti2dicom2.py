@@ -11,6 +11,7 @@ import nibabel
 import pydicom
 
 import dicomtools
+import niftitools
 
 def nifti2dicom(path):
 	# find NIfTI files
@@ -43,6 +44,7 @@ def nifti2dicom(path):
 		# customize common DICOM tags
 		protocol_name = re.sub("\.nii(?:\.gz)$", "", os.path.split(niftipath)[-1], flags=re.I)
 		series_instance_uid = pydicom.uid.generate_uid()
+		window_center, window_width = niftitools.autowindowing(nifti)
 		# prepare DICOM pixel data by transposing NIfTI data
 		data = nifti.get_data().swapaxes(0, 1)
 		# save DICOM files
@@ -86,9 +88,11 @@ def nifti2dicom(path):
 			if (0x0028, 0x0107) in dataset:
 				dataset[0x0028, 0x0107].value = data_slice.max()
 			# (0x0028, 0x1050) Window Center
+			if (0x0028, 0x1050) in dataset:
+				dataset[0x0028, 0x1050].value = window_center
 			# (0x0028, 0x1051) Window Width
-			if (0x0028, 0x1050) in dataset and (0x0028, 0x1051) in dataset:
-				dicomtools.autobrightness(dataset, data_slice)
+			if (0x0028, 0x1051) in dataset:
+				dataset[0x0028, 0x1051].value = window_width
 			# (0x0028, 0x1052) Rescale Intercept
 			if (0x0028, 0x1052) in dataset:
 				dataset[0x0028, 0x1052].value = 0
