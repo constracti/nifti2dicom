@@ -37,9 +37,6 @@ def nifti2dicom(path):
 	shape, zooms, affine = dicomtools.get_affine(dataset1, dataset2)
 	# prepare common DICOM dataset
 	dataset = copy.deepcopy(dataset1)
-	# TODO (0x0008, 0x0018) SOP Instance UID steady increment by one
-	if (0x0008, 0x0018) in dataset:
-		del dataset[0x0008, 0x0018]
 	# (0x0008, 0x2112) Source Image Sequence
 	if (0x0008, 0x2112) in dataset:
 		del dataset[0x0008, 0x2112]
@@ -104,6 +101,9 @@ def nifti2dicom(path):
 			# (0x0008, 0x0012) & (0x0008, 0x0013) Instance Creation Date & Time
 			if (0x0008, 0x0012) in dataset and (0x0008, 0x0013) in dataset:
 				dicomtools.linear_datetime("InstanceCreation", dataset, dataset1, dataset2)
+			# (0x0008, 0x0018) SOP Instance UID
+			if (0x0008, 0x0018) in dataset:
+				dataset[0x0008, 0x0018].value = pydicom.uid.generate_uid()
 			# (0x0008, 0x0022) & (0x0008, 0x0032) Acquisition Date & Time
 			dicomtools.linear_datetime("Acquisition", dataset, dataset1, dataset2)
 			# (0x0008, 0x0023) & (0x0008, 0x0033) Content Date & Time
