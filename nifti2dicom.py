@@ -38,34 +38,45 @@ def nifti2dicom(path):
 	# prepare common DICOM dataset
 	dataset = copy.deepcopy(dataset1)
 	# TODO (0x0008, 0x0018) SOP Instance UID steady increment by one
-	dataset.pop((0x0008, 0x0018), None)
+	if (0x0008, 0x0018) in dataset:
+		del dataset[0x0008, 0x0018]
 	# (0x0008, 0x2112) Source Image Sequence
-	dataset.pop((0x0008, 0x2112), None)
+	if (0x0008, 0x2112) in dataset:
+		del dataset[0x0008, 0x2112]
 	if (0x0019, 0x0010) in dataset and dataset[0x0019, 0x0010].value == "SIEMENS MR HEADER":
 		# (0x0019, 0x100b) SliceMeasurementDuration
-		dataset.pop((0x0019, 0x100b), None)
+		if (0x0019, 0x100b) in dataset:
+			del dataset[0x0019, 0x100b]
 		# (0x0019, 0x1029) MosaicRefAcqTimes
-		dataset.pop((0x0019, 0x1029), None)
+		if (0x0019, 0x1029) in dataset:
+			del dataset[0x0019, 0x1029]
 	if (0x0029, 0x0010) in dataset and dataset[0x0029, 0x0010].value == "SIEMENS CSA HEADER":
 		# (0x0029, 0x1010) CSA Image Header Info
 		csa_image_header_info = dicomtools.csa2_decode(dataset[0x0029, 0x1010].value)
 	if (0x0043, 0x0010) in dataset and dataset[0x0043, 0x0010].value == "GEMS_PARM_01":
 		# (0x0043, 0x1028) Unique image iden
-		dataset.pop((0x0043, 0x1028), None)
+		if (0x0043, 0x1028) in dataset:
+			del dataset[0x0043, 0x1028]
 		# (0x0043, 0x1029) Histogram tables
-		dataset.pop((0x0043, 0x1029), None)
+		if (0x0043, 0x1029) in dataset:
+			del dataset[0x0043, 0x1029]
 		# (0x0043, 0x102a) User defined data
-		dataset.pop((0x0043, 0x102a), None)
+		if (0x0043, 0x102a) in dataset:
+			del dataset[0x0043, 0x102a]
 		# (0x0043, 0x1030) Vas collapse flag
-		dataset.pop((0x0043, 0x1030), None)
+		if (0x0043, 0x1030) in dataset:
+			del dataset[0x0043, 0x1030]
 		# (0x0043, 0x1039) Slop_int_6... slop_int_9
-		dataset.pop((0x0043, 0x1039), None)
+		if (0x0043, 0x1039) in dataset:
+			del dataset[0x0043, 0x1039]
 	if (0x0051, 0x0010) in dataset and dataset[0x0051, 0x0010].value == "SIEMENS MR HEADER":
 		# (0x0051, 0x100d), e.g. SP A116.1 and SP P72.4
-		dataset.pop((0x0051, 0x100d), None)
+		if (0x0051, 0x100d) in dataset:
+			del dataset[0x0051, 0x100d]
 	if (0x2001, 0x0090) in dataset and dataset[0x2001, 0x0090].value == "Philips Imaging DD 129":
 		# (0x2001, 0x9000) Unknown
-		dataset.pop((0x2001, 0x9000), None)
+		if (0x2001, 0x9000) in dataset:
+			del dataset[0x2001, 0x9000]
 	for nifticnt, niftipath in enumerate(niftipaths):
 		print("reading [{}/{}] NIfTI file {}".format(nifticnt + 1, len(niftipaths), niftipath))
 		# reorient NIfTI image
